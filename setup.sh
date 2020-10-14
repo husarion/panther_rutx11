@@ -22,8 +22,8 @@ rpi_serial=$(cat /proc/cpuinfo | awk '/Serial/ {print $3}')
 #get MAC of eth on Raspberry PI
 rpi_mac=$(ethtool --show-permaddr eth0 | awk '{print $3}')
 #get MAC of NUC
-ping nuc -c 1
-nuc_mac=$(arp -a | awk '/nuc/ {print $4}')
+ping husarion.lan -c 1
+nuc_mac=$(arp -a | awk '/husarion.lan/ {print $4}')
 	
 #create ssh private/public key pair without passphrase
 ssh-keygen -t rsa -b 4096 -q -N "" -f ~/.ssh/id_rsa
