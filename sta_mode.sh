@@ -2,7 +2,22 @@
 #Script used to connect to wifi network as a WAN connection
 
 rutx11_ip=192.168.1.1
-
+function help {
+    echo "
+    Add WiFi network as a WAN for RUTX11. Possible on 2.4GHz and 5GHz radios. Currently only single AP (no roaming) supported. Choosen radio will switch its channel to the same as added network. \n
+    Wifi AP which you wish to add should be in range of RUTX11. \n
+    Usage: sta_mode [-abcehprs] \n
+    Options: \n
+    \t-a, --address <ip> IP4 address of RUTX11 \n
+    \t-r, --radio <radio_numer> 0 for 2.4GHz radio, 1 for 5GHz radio \n
+    \t-s, --ssid <SSID> SSID (name) of WiFi network to be added. It must be in range of RUTX11 when command is run!\n
+    \t-p, --password <password> password for WiFi network. If network is open not required.\n
+    \t-b, --bssid <BSSID> optional, MAC address of AP which broadcast WiFi network. If not given network scan will be initiated to find it.\n
+    \t-e, --encryption <string> optional, psk2 for WPA2, psk for WPA, wep for WEP, none if open WiFi. If not given network scan will be initiated to find it.\n
+    \t-c, --channel <number> opntional, channel of WiFi network to be connected.  If not given network scan will be initiated to find it.\n
+    \t-h, --help"
+    
+}
 
 while [ "$1" != "" ]; do
     case $1 in
@@ -28,7 +43,7 @@ while [ "$1" != "" ]; do
                                 channel="$1"
                                 ;;
         -h | --help )           help
-                                exit
+                                exit 1
                                 ;;
         * )                     help
                                 exit 1
@@ -36,25 +51,7 @@ while [ "$1" != "" ]; do
     shift
 done
 
-funtion help {
-    echo <<EOF
-    "Add WiFi network as a WAN for RUTX11. Possible on 2.4GHz and 5GHz radios. Currently only single AP (no roaming) supported. Choosen radio will switch its channel to the same as added network. \n
-    Wifi AP which you wish to add should be in range of RUTX11. \n
-    Usage: sta_mode [-abcehprs] \n
-    Options: \n
-    \t-a, --address <ip> IP4 address of RUTX11 \n
-    \t-r, --radio <radio_numer> 0 for 2.4GHz radio, 1 for 5GHz radio \n
-    \t-s, --ssid <SSID> SSID (name) of WiFi network to be added. It must be in range of RUTX11 when command is run!\n
-    \t-p, --password <password> password for WiFi network. If network is open not required.\n
-    \t-b, --bssid <BSSID> optional, MAC address of AP which broadcast WiFi network. If not given network scan will be initiated to find it.\n
-    \t-e, --encryption <string> optional, psk2 for WPA2, psk for WPA, wep for WEP, none if open WiFi. If not given network scan will be initiated to find it.\n
-    \t-c, --channel <number> opntional, channel of WiFi network to be connected.  If not given network scan will be initiated to find it.\n
-    \t-h, --help"
 
-
-EOF
-    
-}
 radio_scan=$(ssh root@$rutx11_ip "iwinfo radio$radio scan")
 bssid=$(echo $radio_scan | grep -A 3 -B 1 $ssid | awk '/Address/ {print $5}')
 channel=$(echo $radio_scan | grep -A 3 -B 1 $ssid | awk '/Channel/ {print $4}')
