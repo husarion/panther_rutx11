@@ -3,11 +3,15 @@
 #Script used for first setup of Teltonika RUTX11 
 
 rutx11_ip=192.168.1.1
+new_ip=10.15.20.1
 
 while [ "$1" != "" ]; do
     case $1 in
         -a | --address )        shift
                                 rutx11_ip="$1"
+                                ;;
+        -n | --new-ip )         shift
+                                new_ip="$1"
                                 ;;
         -h | --help )           usage
                                 exit
@@ -44,12 +48,15 @@ ssh root@$rutx11_ip << EOF
     uci set ntpclient.@ntpclient[0].zoneName='Europe/Warsaw'  
     uci set system.system.timezone='CET-1CEST,M3.5.0,M10.5.0/3'
     uci set system.ntp.enabled='1'
+    uci set ntpclient.@ntpclient[0].gps_sync='1'
+    uci set ntpclient.@ntpclient[0].gps_interval='86400'
+
 
     uci set rms_connect_mqtt.rms_connect_mqtt.enable='0'
 
     uci set gps.gpsd.enabled='1'
     uci set gps.gpsd.galileo_sup='1'
-    uci set gps.gpsd.glonass_sup='1'
+    uci set gps.gpsd.glonass_sup='7'
     uci set gps.gpsd.beidou_sup='0'
     
     uci set gps.nmea_forwarding.enabled='1'
@@ -60,27 +67,27 @@ ssh root@$rutx11_ip << EOF
     uci set gps.https.enabled='1'
     uci set gps.https.hostname='10.15.20.3'
 
-    uci set gps.GPGSV.forwarding_enabled='0'
+    uci set gps.GPGSV.forwarding_enabled='1'
     uci set gps.GPGSV.forwarding_interval='1'
-    uci set gps.GPGGA.forwarding_enabled='0'
+    uci set gps.GPGGA.forwarding_enabled='1'
     uci set gps.GPGGA.forwarding_interval='1'
-    uci set gps.GPVTG.forwarding_enabled='0'
+    uci set gps.GPVTG.forwarding_enabled='1'
     uci set gps.GPVTG.forwarding_interval='1'
-    uci set gps.GPRMC.forwarding_enabled='0'
+    uci set gps.GPRMC.forwarding_enabled='1'
     uci set gps.GPRMC.forwarding_interval='1'
-    uci set gps.GPGSA.forwarding_enabled='0'
+    uci set gps.GPGSA.forwarding_enabled='1'
     uci set gps.GPGSA.forwarding_interval='1'
-    uci set gps.GLGSV.forwarding_enabled='0'
+    uci set gps.GLGSV.forwarding_enabled='1'
     uci set gps.GLGSV.forwarding_interval='1'
-    uci set gps.GNGSA.forwarding_enabled='0'
+    uci set gps.GNGSA.forwarding_enabled='1'
     uci set gps.GNGSA.forwarding_interval='1'
-    uci set gps.GNGNS.forwarding_enabled='0'
+    uci set gps.GNGNS.forwarding_enabled='1'
     uci set gps.GNGNS.forwarding_interval='1'
-    uci set gps.GAGSV.forwarding_enabled='0'
+    uci set gps.GAGSV.forwarding_enabled='1'
     uci set gps.GAGSV.forwarding_interval='1'
-    uci set gps.PQGSV.forwarding_enabled='0'
+    uci set gps.PQGSV.forwarding_enabled='1'
     uci set gps.PQGSV.forwarding_interval='1'
-    uci set gps.PQGSA.forwarding_enabled='0'
+    uci set gps.PQGSA.forwarding_enabled='1'
     uci set gps.PQGSA.forwarding_interval='1'    
 
     uci set wireless.radio0.channel='auto'

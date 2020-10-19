@@ -4,7 +4,7 @@
 rutx11_ip=192.168.1.1
 function help {
     echo "
-    Add WiFi network as a WAN for RUTX11. Possible on 2.4GHz and 5GHz radios. Currently only single AP (no roaming) supported. Choosen radio will switch its channel to the same as added network. \n
+    Add WiFi network as a WAN for RUTX11. Possible on 2.4GHz and 5GHz radios. Currently only single AP (no roaming) per radio supported. Choosen radio will switch its channel to the same as added WiFi. \n
     Wifi AP which you wish to add should be in range of RUTX11. \n
     Usage: sta_mode [-abcehprs] \n
     Options: \n
