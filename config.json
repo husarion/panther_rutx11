@@ -1,0 +1,26 @@
+{
+    "husarnet":{
+        "hostname":"your_desired_hostname",
+        "joincode":"your_join_code"
+    },
+    "wifi_client":[
+
+        {
+            "radio":"1",
+            "ssid":"your_5GHz_uplink",
+            "password":"your_password",
+            "encryption":"psk2"
+        },
+        {
+            "radio":"0",
+            "ssid":"your_2.4GHz_uplink",
+            "password":"yout_password",
+            "encryption":"psk2"
+        }
+
+    ],
+    "celluar":[
+        
+    ]
+
+}
