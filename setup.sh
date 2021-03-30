@@ -45,6 +45,11 @@ ssh root@$rutx11_ip << EOF
     uci set network.wan.auto='0'
     uci set network.lan.ifname='eth0 eth1'
 
+    uci set network.trm_wwan=interface
+    uci set network.trm_wwan.metric='2'
+    uci set network.trm_wwan.proto='dhcp'
+    uci set firewall.@zone[1].network='wan wan6 mob1s1a1 mob1s2a1 trm_wwan'
+
     uci set ntpclient.@ntpclient[0].zoneName='Europe/Warsaw'  
     uci set system.system.timezone='CET-1CEST,M3.5.0,M10.5.0/3'
     uci set system.ntp.enabled='1'
@@ -106,6 +111,9 @@ ssh root@$rutx11_ip << EOF
     uci set dhcp.@host[-1].ip="10.15.20.3"
     uci set dhcp.@host[-1].mac="$nuc_mac"
     uci set dhcp.@host[-1].name="nuc"
+
+    uci set travelmate.global.trm_enabled='1'
+    
     uci commit
     reboot
     

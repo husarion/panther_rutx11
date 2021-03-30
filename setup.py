@@ -7,7 +7,7 @@ import time
 allowed_encryption = ["psk2", "none"]
 allowed_radio = ['0', '1']
 
-host = '192.168.1.1'
+host = '10.15.20.1'
 user_name = "root"
 
 phy_radio_config = (
