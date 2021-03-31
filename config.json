@@ -6,15 +6,9 @@
     "wifi_client":[
 
         {
-            "radio":"1",
-            "ssid":"your_5GHz_uplink",
-            "password":"your_password",
-            "encryption":"psk2"
-        },
-        {
             "radio":"0",
-            "ssid":"your_2.4GHz_uplink",
-            "password":"yout_password",
+            "ssid":"SSID_of_your_network",
+            "password":"password_to_your_network",
             "encryption":"psk2"
         }
 
