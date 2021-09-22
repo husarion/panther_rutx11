@@ -1,15 +1,15 @@
 # panther_rutx11
 ## Description
 Network configuration scripts for RUTX11 router inside Panther. Enables quick way to set WiFi client, WiFi access-point, cellular (LTE), GNSS, Husarnet network and more.
-Scripts are compatible with Teltonika RUX11 running customized OpenWRT-19.XX with latest [Travelmate](https://github.com/openwrt/packages/tree/openwrt-19.07/net/travelmate/files) package installed. 
+Scripts are compatible with Teltonika RUTX11 running customized OpenWRT-19.XX with latest [Travelmate](https://github.com/openwrt/packages/tree/openwrt-19.07/net/travelmate/files) package installed. 
 
 ## WiFi behavior
 
 ### Client Mode 
 
-Panther can be connected to existing WiFi network on 2.4 GHz using it as an uplink. Multiple SSID can be set, router will prioritize them in descending order. If signal strength falls below set limit next (if available) network will be used. 
+Panther can be connected to the existing WiFi network on 2.4 GHz using it as an uplink. Multiple SSID can be set, the router will prioritize them in descending order. If signal strength falls below set limit, the next (if available) network will be used.
 
-**Note:** While uplink on 5 GHz radio is possible, due to chipset limitations it is impossible to enable roaming and multiple SSID. As a result we recommend using 2.4 GHZ for uplink.
+**Note:** While uplink on 5 GHz radio is possible, due to chipset limitations it is impossible to enable roaming and multiple SSID. As a result, we recommend using 2.4 GHZ for uplink.
 
 ### Access-point (STA mode)
 
@@ -18,11 +18,11 @@ In default configuration on both radios (2.4 GHz & 5 GHz) access-point is enable
 ## Configuration
 
 Configuration is stored in `config.json` file using extended version of JSON, which enables comments and advanced error messages.
-To apply new configuration execute `setup.py` which is located in the same folder as `config.json` by command: `./setup.py`.
+To apply new configuration, execute `setup.py` which is located in the same folder as `config.json` by command: `./setup.py`.
 
 ## Configuration options
 
-Config file is divided into sections (arrays), which are listed with possible options as bellow.
+Config file is divided into sections (arrays), which are listed with possible options as below.
 | Section name | Multiple arrays |
 |:------------:|:---------------:|
 |  wifi_client |       yes       |
@@ -33,7 +33,7 @@ Config file is divided into sections (arrays), which are listed with possible op
 
 ### wifi_client
 
-This section can contains multiple arrays of below option:
+This section can contain multiple arrays of below option:
 |   Option   | Required | Default value |                                                 Description / valid values                                                 |
 |:----------:|:--------:|:-------------:|:--------------------------------------------------------------------------------------------------------------------------:|
 |    radio   |    yes   |       -       |                       Defines used radio. `0` is recommended.<br>`0` - 2.4 GHz radio<br>`1` - 5 GHz radio                       |
@@ -43,7 +43,7 @@ This section can contains multiple arrays of below option:
 
 ### wifi_ap
 
-This section is used to configure access-point setting. Most common use is changing default password for WiFi. Can contains multiple arrays of below option
+This section is used to configure access-point setting. The most common use is changing the default password for WiFi. Can contain multiple arrays of below option
 |   Option   | Required |                               Default value                               |                                                 Description / valid values                                                 |
 |:----------:|:--------:|:-------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------------------------------:|
 |    radio   |    yes   |                                     -                                     |                               Defines used radio.<br>`0` - 2.4 GHz radio<br>`1` - 5 GHz radio                              |
