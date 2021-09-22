@@ -142,7 +142,7 @@ except KeyError:
     print("Husarnet section not defined, skipping Husarnet configuration")
 else:
     try:
-        if config['husarnet']['joincode'] == "your_join_code":
+        if config['husarnet']['join_code'] == "your_join_code":
             print("Your Husarnet joincode is incorrect, skipping Husarnet configuration")
         else:        
             subprocess.run(["sudo husarnet " + config['husarnet']['joincode'] + " " + config['husarnet']['hostname']], shell=True)

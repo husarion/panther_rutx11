@@ -1,7 +1,7 @@
 {
     "husarnet":{
         "hostname":"your_desired_hostname",
-        "joincode":"your_join_code"
+        "join_code":"your_join_code"
     },
     "wifi_client":[
 
@@ -12,9 +12,6 @@
             "encryption":"psk2"
         }
 
-    ],
-    "celluar":[
-        
     ]
 
 }
