@@ -3,13 +3,11 @@
         "hostname":"your_desired_hostname",
         "join_code":"your_join_code"
     },
+    "wifi_client_radio":0,
     "wifi_client":[
-
         {
-            "radio":"0",
             "ssid":"SSID_of_your_network",
-            "password":"password_to_your_network",
-            "encryption":"psk2"
+            "password":"password_to_your_network"
         }
 
     ]
