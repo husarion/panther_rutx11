@@ -62,7 +62,7 @@ else:
     try:
         wifi_client_radio = config["wifi_client_radio"]
         if wifi_client_radio not in [0,1,'0','1']:
-            raise TypeError("Allowed values for wifi_client_radio is 0 or 1.")
+            raise TypeError("Allowed values for wifi_client_radio is 0 or 1. Exiting.")
     except:
         print("wifi_client_radio not defined, assuming 2.4GHz radio")
         wifi_client_radio = 0
@@ -72,21 +72,20 @@ else:
 if reconfigure_multi_wifi:
     try:
         #delete multi_wifi WLANs list, write new one
-        print(cmd)
         output = ssh.run_command("for x in $(seq $(expr $(uci get multi_wifi.@wifi-iface[-1].priority) - 1) -1 0); do uci delete multi_wifi.@wifi-iface[$x]; done; " + cmd + "uci commit;" + "reload_config")
-        for line in output.stdout:
-            print(line)
+        # for line in output.stdout:
+        #     print(line)
         #get current radio for multi_wifi
         output = ssh.run_command("uci get wireless.multi_wifi.device")
         used_radio = None
         for line in output.stdout:
             used_radio = line 
-            print(used_radio)
+            # print(used_radio)
         if used_radio != 'radio'+str(wifi_client_radio):
-            print("uci set wireless.multi_wifi.device='radio"+str(wifi_client_radio)+"';" +"uci commit; reload_config")
+            # print("uci set wireless.multi_wifi.device='radio"+str(wifi_client_radio)+"';" +"uci commit; reload_config")
             output = ssh.run_command("uci set wireless.multi_wifi.device='radio"+str(wifi_client_radio)+"';" +"uci commit; reload_config")
-            for line in output.stdout:
-                print(line)
+            # for line in output.stdout:
+            #     print(line)
     
     except pssh.exceptions.ConnectionError:
         print("SSH connection failed, configuration not applied")
@@ -94,6 +93,8 @@ if reconfigure_multi_wifi:
         print("Router configuration saved")
     
 #wait till uplink is established - checking via ping to 8.8.8.8 is successful
+#wait 5 seconds to allow router reconfiguration
+time.sleep(5)
 while subprocess.call(['ping','8.8.8.8','-c','1',"-W","1"], stdout=subprocess.DEVNULL):
     time.sleep(5)
     print("Waiting for configuration to get applied")

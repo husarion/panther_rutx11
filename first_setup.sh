@@ -22,8 +22,7 @@ while [ "$1" != "" ]; do
     shift
 done
 #get serial number of Raspberry Pi
-#rpi_serial=$(cat /proc/cpuinfo | awk '/Serial/ {print $3}')
-rpi_serial=1111
+rpi_serial=$(cat /proc/cpuinfo | awk '/Serial/ {print $3}')
 #get MAC of eth on Raspberry PI
 rpi_mac=$(ethtool --show-permaddr eth0 | awk '{print $3}')
 #get MAC of NUC
