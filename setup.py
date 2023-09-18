@@ -19,7 +19,7 @@ user_name = "root"
 config_file = 'config.json' 
 reconfigure_wifi = False
 reconfigure_client = False
-debug_flag = True # if true print debug messages
+debug_flag = False # if true print debug messages
 
 ssh = SSHClient(host, user=user_name, timeout=5, num_retries=1)
 
