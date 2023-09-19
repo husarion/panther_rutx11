@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 
 # Script for changing MultiAP WiFi settings in Teltonika RUTX11.
-# Requires RUTX11 device with configuration set by first_setup.sh script - by default done by Husarion during production.  
+# Requires RUTX11 device with configuration set by factory_settings.sh script - by default done by Husarion during production.  
 
-import click
+from click import secho
 import io
 import json
+import os
 from pssh.clients import SSHClient
 import pssh.exceptions 
 import subprocess
-import time
-import os
 import sys
+import time
 
 
 allowed_radio = ['0', '1']
@@ -26,8 +26,7 @@ debug_flag = False # if true print debug messages
 ssh = SSHClient(host, user=user_name, timeout=5, num_retries=1)
 
 def multi_wifi_config_validator(data, name):
-    index = 1
-    for x in data:
+    for index, key in enumerate(data, start=1):
         try:
             if x["ssid"] == '':
                 raise KeyError
@@ -79,10 +78,8 @@ except KeyError:
     click.secho("wifi_client section not defined, skipping client configuration")
 else:
     multi_wifi_config_validator(config["wifi_client"], "wifi_client")
-    priority = 1
-    for x in config["wifi_client"]:
+    for priority, x in enumerate(config["wifi_client"], start=1):
         cmd += set_multi_wifi(x["ssid"], x["password"], priority)
-        priority += 1
     if debug_flag == True:
         click.secho(cmd)
     try:
@@ -106,8 +103,8 @@ if reconfigure_multi_wifi:
             used_radio = line
             if debug_flag == True:    
                 click.secho(used_radio)
-        if used_radio != 'radio'+str(wifi_client_radio):
-            cmd +="uci set wireless.multi_wifi.device='radio"+str(wifi_client_radio)+"';"
+        if used_radio != 'radio' + str(wifi_client_radio):
+            cmd += "uci set wireless.multi_wifi.device='radio" + str(wifi_client_radio) + "';"
             if debug_flag == True:
                 click.secho("Changing radio")
         # Delete multi_wifi WLANs list, write new one
