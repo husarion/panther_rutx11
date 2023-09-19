@@ -3,6 +3,7 @@
 # Script for changing MultiAP WiFi settings in Teltonika RUTX11.
 # Requires RUTX11 device with configuration set by first_setup.sh script - by default done by Husarion during production.  
 
+import click
 import io
 import json
 from pssh.clients import SSHClient
@@ -11,6 +12,7 @@ import subprocess
 import time
 import os
 import sys
+
 
 allowed_radio = ['0', '1']
 
@@ -31,22 +33,22 @@ def multi_wifi_config_validator(data, name):
                 raise KeyError
             
         except KeyError:
-            print("No SSID for {} entry {}".format(name, index))
+            click.secho("No SSID for {} entry {}".format(name, index), fg='red', bold=True)
             sys.exit("Exiting.")
         try:
             x["password"]
             if len(x["password"]) < 8:
                 if x["password"] == '':
-                    print("No password for {} entry {}. Assuming open network. Make sure it is correct.1".format(name, index))
+                    click.secho("No password for {} entry {}. Assuming open network. Make sure it is correct.".format(name, index))
                     x["password"] = None
                 else:
                     raise ValueError("Password for {} entry {} is shorter than minimal lenght of 8".format(name, index))
                 
         except ValueError as e:
-            print(e)
+            click.secho(e, fg='red', bold=True)
             sys.exit("Exiting.")
         except KeyError:
-            print("No password for {} entry {}. Assuming open network. Make sure it is correct.2".format(name, index))
+            click.secho("No password for {} entry {}. Assuming open network. Make sure it is correct.".format(name, index), fg='yellow', bold=True)
             x["password"] = None
         index += 1
 
@@ -66,7 +68,7 @@ try:
     config = open(path,'r')
     config = json.load(config)
 except:
-    print("Could not load configuration file.")
+    click.secho("Could not load configuration file.", fg='red', bold=True)
     sys.exit("Exiting.")
 
 # Verify if wifi_client config is present and valid
@@ -74,7 +76,7 @@ cmd = ""
 try:
     config["wifi_client"]
 except KeyError:
-    print("wifi_client section not defined, skipping client configuration")
+    click.secho("wifi_client section not defined, skipping client configuration")
 else:
     multi_wifi_config_validator(config["wifi_client"], "wifi_client")
     priority = 1
@@ -82,7 +84,7 @@ else:
         cmd += set_multi_wifi(x["ssid"], x["password"], priority)
         priority += 1
     if debug_flag == True:
-        print(cmd)
+        click.secho(cmd)
     try:
         wifi_client_radio = config["wifi_client_radio"]
         if wifi_client_radio not in [0,1,'0','1']:
@@ -90,7 +92,7 @@ else:
             sys.exit("Exiting.")
 
     except KeyError:
-        print("wifi_client_radio not defined, assuming 2.4GHz radio")
+        click.secho("wifi_client_radio not defined, assuming 2.4GHz radio", fg='yellow')
         wifi_client_radio = 0
         
     reconfigure_multi_wifi = True
@@ -103,34 +105,35 @@ if reconfigure_multi_wifi:
         for line in output.stdout:
             used_radio = line
             if debug_flag == True:    
-                print(used_radio)
+                click.secho(used_radio)
         if used_radio != 'radio'+str(wifi_client_radio):
             cmd +="uci set wireless.multi_wifi.device='radio"+str(wifi_client_radio)+"';"
             if debug_flag == True:
-                print("Changing radio")
+                click.secho("Changing radio")
         # Delete multi_wifi WLANs list, write new one
         output = ssh.run_command("for x in $(seq $(expr $(uci get multi_wifi.@wifi-iface[-1].priority) - 1) -1 0); do uci delete multi_wifi.@wifi-iface[$x]; done; " + cmd + "uci commit;" + "reload_config")
         time.sleep(3)
     except pssh.exceptions.ConnectionError:
-        print("SSH connection failed, configuration not applied")
+        click.secho("SSH connection failed, configuration not applied", fg='red', bold=True)
         sys.exit("Exiting.")
     else:
-        print("Router configuration saved")
+        click.secho("Router configuration saved")
     
 # Wait till uplink is established - checking via ping to 8.8.8.8 is successful
 # Wait 10 seconds to allow router reconfiguration
-print("Pinging 8.8.8.8 to check for internet connection. It can take up to 8 minutes (depending on choosen radio).")
+click.secho("Pinging 8.8.8.8 to check for internet connection. It can take up to 8 minutes (depending on choosen radio).", fg='yellow', bold=True)
 time.sleep(10)
 try_count = 1
 auth_fail_time = None
 kernel_time = None
 while subprocess.call(['ping','8.8.8.8','-c','1',"-W","1"], stdout=subprocess.DEVNULL):
     time.sleep(10)
-    print("Waiting for establishing internet connection. Try {}/50".format(try_count))
+    click.secho("Waiting for establishing internet connection. Try {}/50".format(try_count))
     try_count += 1
 
     if try_count > 50:
-        sys.exit("Failed to obtain internet connection. \nCheck if choosen WiFi is in range and/or SSID is correct.")
+        click.secho("Failed to obtain internet connection. \nCheck if choosen WiFi is in range and/or SSID is correct.", fg='red', bold=True)
+        sys.exit("Exiting")
     try:
         output = ssh.run_command("cat /proc/uptime | awk '{print $1}'")
         kernel_time = None
@@ -140,32 +143,33 @@ while subprocess.call(['ping','8.8.8.8','-c','1',"-W","1"], stdout=subprocess.DE
         for line in output.stdout:
             auth_fail_time = line
         if debug_flag == True:
-            print(kernel_time)
-            print(auth_fail_time)
+            click.secho(kernel_time)
+            click.secho(auth_fail_time)
     except pssh.exceptions.ConnectionError:
-        print("SSH connection failed, configuration not applied")
+        click.secho("SSH connection failed, configuration not applied", fg='red', bold=True)
         sys.exit("Exiting.")            
     if auth_fail_time != None:
         auth_fail_time = auth_fail_time[:-1]
     else:
         continue
     if float(auth_fail_time) > float(kernel_time) - 15:
-         sys.exit("Failed to obtain internet connection.\nPassword is incorrect.")
-print("Success. Panther has internet connection.")
+         click.secho("Failed to obtain internet connection.\nPassword is incorrect.", fg='red', bold=True)
+         sys.exit()
+click.secho("Success. Panther has internet connection.", fg='green', bold=True)
 
 # Connect to husarnet
 try:
     config['husarnet']
 except KeyError:
-    print("Husarnet section not defined, skipping Husarnet configuration")
+    click.secho("Husarnet section not defined, skipping Husarnet configuration")
 else:
     try:
         if config['husarnet']['join_code'] == "your_join_code":
-            print("Your Husarnet joincode is incorrect, skipping Husarnet configuration")
+            click.secho("Your Husarnet joincode is incorrect, skipping Husarnet configuration")
         else:        
             subprocess.run(["sudo husarnet " + config['husarnet']['joincode'] + " " + config['husarnet']['hostname']], shell=True)
     except KeyError:
-        print("Hostname or joincode not defined in husarnet configuration")
+        click.secho("Hostname or joincode not defined in husarnet configuration")
 
 
 
