@@ -28,28 +28,27 @@ ssh = SSHClient(host, user=user_name, timeout=5, num_retries=1)
 def multi_wifi_config_validator(data, name):
     for index, key in enumerate(data, start=1):
         try:
-            if x["ssid"] == '':
+            if key["ssid"] == '':
                 raise KeyError
             
         except KeyError:
-            click.secho("No SSID for {} entry {}".format(name, index), fg='red', bold=True)
+            secho("No SSID for {} entry {}".format(name, index), fg='red', bold=True)
             sys.exit("Exiting.")
         try:
-            x["password"]
-            if len(x["password"]) < 8:
-                if x["password"] == '':
-                    click.secho("No password for {} entry {}. Assuming open network. Make sure it is correct.".format(name, index))
-                    x["password"] = None
+            key["password"]
+            if len(key["password"]) < 8:
+                if key["password"] == '':
+                    secho("No password for {} entry {}. Assuming open network. Make sure it is correct.".format(name, index))
+                    key["password"] = None
                 else:
                     raise ValueError("Password for {} entry {} is shorter than minimal lenght of 8".format(name, index))
                 
         except ValueError as e:
-            click.secho(e, fg='red', bold=True)
+            secho(e, fg='red', bold=True)
             sys.exit("Exiting.")
         except KeyError:
-            click.secho("No password for {} entry {}. Assuming open network. Make sure it is correct.".format(name, index), fg='yellow', bold=True)
-            x["password"] = None
-        index += 1
+            secho("No password for {} entry {}. Assuming open network. Make sure it is correct.".format(name, index), fg='yellow', bold=True)
+            key["password"] = None
 
 def set_multi_wifi(ssid, password, priority):
     command = "uci add multi_wifi wifi-iface\n"
@@ -67,7 +66,7 @@ try:
     config = open(path,'r')
     config = json.load(config)
 except:
-    click.secho("Could not load configuration file.", fg='red', bold=True)
+    secho("Could not load configuration file.", fg='red', bold=True)
     sys.exit("Exiting.")
 
 # Verify if wifi_client config is present and valid
@@ -75,13 +74,13 @@ cmd = ""
 try:
     config["wifi_client"]
 except KeyError:
-    click.secho("wifi_client section not defined, skipping client configuration")
+    secho("wifi_client section not defined, skipping client configuration")
 else:
     multi_wifi_config_validator(config["wifi_client"], "wifi_client")
-    for priority, x in enumerate(config["wifi_client"], start=1):
-        cmd += set_multi_wifi(x["ssid"], x["password"], priority)
+    for priority, key in enumerate(config["wifi_client"], start=1):
+        cmd += set_multi_wifi(key["ssid"], key["password"], priority)
     if debug_flag == True:
-        click.secho(cmd)
+        secho(cmd)
     try:
         wifi_client_radio = config["wifi_client_radio"]
         if wifi_client_radio not in [0,1,'0','1']:
@@ -89,7 +88,7 @@ else:
             sys.exit("Exiting.")
 
     except KeyError:
-        click.secho("wifi_client_radio not defined, assuming 2.4GHz radio", fg='yellow')
+        secho("wifi_client_radio not defined, assuming 2.4GHz radio", fg='yellow')
         wifi_client_radio = 0
         
     reconfigure_multi_wifi = True
@@ -102,34 +101,34 @@ if reconfigure_multi_wifi:
         for line in output.stdout:
             used_radio = line
             if debug_flag == True:    
-                click.secho(used_radio)
+                secho(used_radio)
         if used_radio != 'radio' + str(wifi_client_radio):
             cmd += "uci set wireless.multi_wifi.device='radio" + str(wifi_client_radio) + "';"
             if debug_flag == True:
-                click.secho("Changing radio")
+                secho("Changing radio")
         # Delete multi_wifi WLANs list, write new one
         output = ssh.run_command("for x in $(seq $(expr $(uci get multi_wifi.@wifi-iface[-1].priority) - 1) -1 0); do uci delete multi_wifi.@wifi-iface[$x]; done; " + cmd + "uci commit;" + "reload_config")
         time.sleep(3)
     except pssh.exceptions.ConnectionError:
-        click.secho("SSH connection failed, configuration not applied", fg='red', bold=True)
+        secho("SSH connection failed, configuration not applied", fg='red', bold=True)
         sys.exit("Exiting.")
     else:
-        click.secho("Router configuration saved")
+        secho("Router configuration saved")
     
 # Wait till uplink is established - checking via ping to 8.8.8.8 is successful
 # Wait 10 seconds to allow router reconfiguration
-click.secho("Pinging 8.8.8.8 to check for internet connection. It can take up to 8 minutes (depending on choosen radio).", fg='yellow', bold=True)
+secho("Pinging 8.8.8.8 to check for internet connection. It can take up to 8 minutes (depending on choosen radio).", fg='yellow', bold=True)
 time.sleep(10)
 try_count = 1
 auth_fail_time = None
 kernel_time = None
 while subprocess.call(['ping','8.8.8.8','-c','1',"-W","1"], stdout=subprocess.DEVNULL):
     time.sleep(10)
-    click.secho("Waiting for establishing internet connection. Try {}/50".format(try_count))
+    secho("Waiting for establishing internet connection. Try {}/50".format(try_count))
     try_count += 1
 
     if try_count > 50:
-        click.secho("Failed to obtain internet connection. \nCheck if choosen WiFi is in range and/or SSID is correct.", fg='red', bold=True)
+        secho("Failed to obtain internet connection. \nCheck if choosen WiFi is in range and/or SSID is correct.", fg='red', bold=True)
         sys.exit("Exiting")
     try:
         output = ssh.run_command("cat /proc/uptime | awk '{print $1}'")
@@ -140,33 +139,33 @@ while subprocess.call(['ping','8.8.8.8','-c','1',"-W","1"], stdout=subprocess.DE
         for line in output.stdout:
             auth_fail_time = line
         if debug_flag == True:
-            click.secho(kernel_time)
-            click.secho(auth_fail_time)
+            secho(kernel_time)
+            secho(auth_fail_time)
     except pssh.exceptions.ConnectionError:
-        click.secho("SSH connection failed, configuration not applied", fg='red', bold=True)
+        secho("SSH connection failed, configuration not applied", fg='red', bold=True)
         sys.exit("Exiting.")            
     if auth_fail_time != None:
         auth_fail_time = auth_fail_time[:-1]
     else:
         continue
     if float(auth_fail_time) > float(kernel_time) - 15:
-         click.secho("Failed to obtain internet connection.\nPassword is incorrect.", fg='red', bold=True)
+         secho("Failed to obtain internet connection.\nPassword is incorrect.", fg='red', bold=True)
          sys.exit()
-click.secho("Success. Panther has internet connection.", fg='green', bold=True)
+secho("Success. Panther has internet connection.", fg='green', bold=True)
 
 # Connect to husarnet
 try:
     config['husarnet']
 except KeyError:
-    click.secho("Husarnet section not defined, skipping Husarnet configuration")
+    secho("Husarnet section not defined, skipping Husarnet configuration")
 else:
     try:
         if config['husarnet']['join_code'] == "your_join_code":
-            click.secho("Your Husarnet joincode is incorrect, skipping Husarnet configuration")
+            secho("Your Husarnet joincode is incorrect, skipping Husarnet configuration")
         else:        
             subprocess.run(["sudo husarnet " + config['husarnet']['joincode'] + " " + config['husarnet']['hostname']], shell=True)
     except KeyError:
-        click.secho("Hostname or joincode not defined in husarnet configuration")
+        secho("Hostname or joincode not defined in husarnet configuration")
 
 
 
