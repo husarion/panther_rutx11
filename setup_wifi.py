@@ -119,11 +119,38 @@ if reconfigure_multi_wifi:
     
 # Wait till uplink is established - checking via ping to 8.8.8.8 is successful
 # Wait 10 seconds to allow router reconfiguration
-print("Pinging 8.8.8.8 to check for internet connection. It can take up to 3 minutes (depending on choosen radio).")
+print("Pinging 8.8.8.8 to check for internet connection. It can take up to 8 minutes (depending on choosen radio).")
 time.sleep(10)
+try_count = 1
+auth_fail_time = None
+kernel_time = None
 while subprocess.call(['ping','8.8.8.8','-c','1',"-W","1"], stdout=subprocess.DEVNULL):
     time.sleep(10)
-    print("Waiting for establishing internet connection.")
+    print("Waiting for establishing internet connection. Try {}/50".format(try_count))
+    try_count += 1
+
+    if try_count > 50:
+        sys.exit("Failed to obtain internet connection. \nCheck if choosen WiFi is in range and/or SSID is correct.")
+    try:
+        output = ssh.run_command("cat /proc/uptime | awk '{print $1}'")
+        kernel_time = None
+        for line in output.stdout:
+            kernel_time = line
+        output = ssh.run_command("dmesg | grep 'denied authentication (status 1)' | tail -1 | awk '{print $2}'")
+        for line in output.stdout:
+            auth_fail_time = line
+        if debug_flag == True:
+            print(kernel_time)
+            print(auth_fail_time)
+    except pssh.exceptions.ConnectionError:
+        print("SSH connection failed, configuration not applied")
+        sys.exit("Exiting.")            
+    if auth_fail_time != None:
+        auth_fail_time = auth_fail_time[:-1]
+    else:
+        continue
+    if float(auth_fail_time) > float(kernel_time) - 15:
+         sys.exit("Failed to obtain internet connection.\nPassword is incorrect.")
 print("Success. Panther has internet connection.")
 
 # Connect to husarnet
