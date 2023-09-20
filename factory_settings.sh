@@ -45,10 +45,10 @@ ssh root@$rutx11_ip << EOF
     uci set network.wan.auto='0'
     uci set network.lan.ifname='eth0 eth1'
 
-    uci set network.trm_wwan=interface
-    uci set network.trm_wwan.metric='2'
-    uci set network.trm_wwan.proto='dhcp'
-    uci set firewall.@zone[1].network='wan wan6 mob1s1a1 mob1s2a1 trm_wwan'
+    uci set network.wwan=interface
+    uci set network.wwan.metric='2'
+    uci set network.wwan.proto='dhcp'
+    uci set firewall.@zone[1].network='wan wan6 mob1s1a1 mob1s2a1 wwan'
 
     uci set ntpclient.@ntpclient[0].zoneName='Europe/Warsaw'  
     uci set system.system.timezone='CET-1CEST,M3.5.0,M10.5.0/3'
@@ -65,12 +65,12 @@ ssh root@$rutx11_ip << EOF
     uci set gps.gpsd.beidou_sup='0'
     
     uci set gps.nmea_forwarding.enabled='1'
-    uci set gps.nmea_forwarding.hostname='10.15.20.3'
+    uci set gps.nmea_forwarding.hostname='10.15.20.2'
     uci set gps.nmea_forwarding.port='5000'
     uci set gps.nmea_forwarding.proto='udp'
 
     uci set gps.https.enabled='1'
-    uci set gps.https.hostname='10.15.20.3'
+    uci set gps.https.hostname='10.15.20.2'
 
     uci set gps.GPGSV.forwarding_enabled='1'
     uci set gps.GPGSV.forwarding_interval='1'
@@ -102,6 +102,16 @@ ssh root@$rutx11_ip << EOF
     uci set wireless.default_radio1.ssid='Panther_5G_${rpi_serial: -4}'
     uci set wireless.default_radio1.key='husarion'
 
+    uci set wireless.multi_wifi=wifi-iface
+    uci set wireless.multi_wifi.network='wwan'
+    uci set wireless.multi_wifi.device='radio0'
+    uci set wireless.multi_wifi.mode='sta'
+    uci set wireless.multi_wifi.multiple='1'
+    uci set wireless.multi_wifi.disabled='0'
+
+    uci set multi_wifi.general.enabled=1
+    uci set multi_wifi.general.scan_time=30
+
     uci add dhcp host
     uci set dhcp.@host[-1].ip="10.15.20.2"
     uci set dhcp.@host[-1].mac="$rpi_mac"
@@ -112,7 +122,8 @@ ssh root@$rutx11_ip << EOF
     uci set dhcp.@host[-1].mac="$nuc_mac"
     uci set dhcp.@host[-1].name="nuc"
 
-    uci set travelmate.global.trm_enabled='1'
+
+
     
     uci commit
     reboot
