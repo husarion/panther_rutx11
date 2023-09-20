@@ -16,9 +16,7 @@ import time
 
 allowed_radio = ['0', '1']
 
-#host = '10.15.20.1' # IP adress of RUTX11
-host = '192.168.1.1' # IP adress of RUTX11
-
+host = '10.15.20.1' # IP adress of RUTX11
 user_name = 'root'
 config_file = 'config.json' 
 reconfigure_wifi = False
