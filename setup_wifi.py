@@ -81,7 +81,7 @@ try:
         sys.exit()    
     firmware_version = str.split(firmware_version_raw,'.')
     if firmware_version[0] != "RUTX_R_00":
-        secho("Could not verify RUTX11 firmware version. Obtained version string {}.Exiting.".format(firmware_version_raw), fg='red', bold=True)
+        secho("Could not verify RUTX11 firmware version. Obtained version string {}. Exiting.".format(firmware_version_raw), fg='red', bold=True)
         sys.exit()  
     elif int(firmware_version[1]) < 7 or (int(firmware_version[1]) == 7 and int(firmware_version[2]) < 2):
         secho("Detected RUTX11 firmware version {} is not supported by this script.\nCheck https://husarion.com/manuals/panther/rutx11-support/ for help.\nExiting.".format(firmware_version_raw), fg='red', bold=True)
@@ -102,7 +102,7 @@ try:
     config = open(path,'r')
     config = json.load(config)
 except json.JSONDecodeError as e:
-    secho("Could not parse configuration file .", fg='red', bold=True)
+    secho("Could not parse configuration file.", fg='red', bold=True)
     secho("{}".format(e), fg='red')
     sys.exit("Exiting.")
 except:
