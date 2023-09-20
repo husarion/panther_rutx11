@@ -16,7 +16,9 @@ import time
 
 allowed_radio = ['0', '1']
 
-host = '10.15.20.1' # IP adress of RUTX11
+#host = '10.15.20.1' # IP adress of RUTX11
+host = '192.168.1.1' # IP adress of RUTX11
+
 user_name = 'root'
 config_file = 'config.json' 
 reconfigure_wifi = False
@@ -59,7 +61,7 @@ def set_multi_wifi(ssid, password, priority):
     command += "uci set multi_wifi.@wifi-iface[-1].priority='{}'\n".format(priority)
     return command
 
-# Verify RUTX firmware version. Versions RUTX_R_00.07.01 and higher are supported.
+# Verify RUTX firmware version. Versions RUTX_R_00.07.02.07 and higher are supported.
 try:
     output = ssh.run_command("cat /etc/version")
     firmware_version_raw = None
@@ -72,9 +74,11 @@ try:
     if firmware_version[0] != "RUTX_R_00":
         secho("Could not verify RUTX11 firmware version. Obtained version string {}.Exiting.".format(firmware_version_raw), fg='red', bold=True)
         sys.exit()  
-    elif int(firmware_version[1]) < 7 or (int(firmware_version[1]) == 7 and int(firmware_version[2]) == 0):
-        secho("Detected RUTX11 firmware version {} is not supported by this script. Contact support@husarion.com for solution. Exiting.".format(firmware_version_raw), fg='red', bold=True)
+    elif int(firmware_version[1]) < 7 or (int(firmware_version[1]) == 7 and int(firmware_version[2]) < 2):
+        secho("Detected RUTX11 firmware version {} is not supported by this script.\nCheck https://husarion.com/manuals/panther/rutx11-firmware-update/ for help.\nExiting.".format(firmware_version_raw), fg='red', bold=True)
         sys.exit()
+    elif int(firmware_version[1]) == 7 and int(firmware_version[2]) < 4:
+        secho("Detected RUTX11 firmware version {} is supported by this script.\nConsider updating RUTX11 firmware for stability and performance improvemets.\nCheck https://husarion.com/manuals/panther/rutx11-firmware-update/ for help.".format(firmware_version_raw), fg='yellow', bold=True)
     else:
         secho("Detected RUTX11 firmware version {} is supported by this script.".format(firmware_version_raw), fg='green', bold=True)                 
 
