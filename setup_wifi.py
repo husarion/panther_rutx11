@@ -22,9 +22,20 @@ config_file = 'config.json'
 reconfigure_wifi = False
 reconfigure_client = False
 debug_flag = False # if true print debug messages
-
-ssh = SSHClient(host, user=user_name, timeout=5, num_retries=1)
-
+try:
+    ssh = SSHClient(host, user=user_name, timeout=5, num_retries=1)
+except pssh.exceptions.AuthenticationError as e:
+    secho("SSH connection failed. Most likely there is no / not valid SSH public key on router. https://husarion.com/manuals/panther/rutx11-support/", fg='red', bold=True)
+    sys.exit("Exiting.")
+except pssh.exceptions.SessionError as e:
+    secho("SSH connection failed.", fg='red', bold=True)
+    sys.exit("Exiting.")
+except pssh.exceptions.SSHError as e:
+    secho("SSH connection failed.", fg='red', bold=True)
+    sys.exit("Exiting.")
+except pssh.exceptions.ConnectionError as e:
+    secho("SSH connection failed. Most likely router is not available or on difrent IP. https://husarion.com/manuals/panther/rutx11-support/", fg='red', bold=True)
+    sys.exit("Exiting.")
 def multi_wifi_config_validator(data, name):
     for index, key in enumerate(data, start=1):
         try:
@@ -73,20 +84,16 @@ try:
         secho("Could not verify RUTX11 firmware version. Obtained version string {}. Exiting.".format(firmware_version_raw), fg='red', bold=True)
         sys.exit()  
     elif int(firmware_version[1]) < 7 or (int(firmware_version[1]) == 7 and int(firmware_version[2]) < 2):
-        secho("Detected RUTX11 firmware version {} is not supported by this script.\nCheck https://husarion.com/manuals/panther/rutx11-firmware-update/ for help.\nExiting.".format(firmware_version_raw), fg='red', bold=True)
+        secho("Detected RUTX11 firmware version {} is not supported by this script.\nCheck https://husarion.com/manuals/panther/rutx11-support/ for help.\nExiting.".format(firmware_version_raw), fg='red', bold=True)
         sys.exit()
     elif int(firmware_version[1]) == 7 and int(firmware_version[2]) < 4:
-        secho("Detected RUTX11 firmware version {} is supported by this script.\nConsider updating RUTX11 firmware for stability and performance improvemets.\nCheck https://husarion.com/manuals/panther/rutx11-firmware-update/ for help.".format(firmware_version_raw), fg='yellow', bold=True)
+        secho("Detected RUTX11 firmware version {} is supported by this script.\nConsider updating RUTX11 firmware for stability and performance improvemets.\nCheck https://husarion.com/manuals/panther/rutx11-support/ for help.".format(firmware_version_raw), fg='yellow', bold=True)
     else:
         secho("Detected RUTX11 firmware version {} is supported by this script.".format(firmware_version_raw), fg='green', bold=True)                 
 
-except pssh.exceptions.AuthenticationError as e:
-    secho("SSH connection failed. Most likely there is no / not valid SSH public key on router.", fg='red', bold=True)
-    secho(e)
-    sys.exit("Exiting.")
 except pssh.exceptions.SessionError as e:
     secho("SSH connection failed.", fg='red', bold=True)
-    secho(e)
+
     sys.exit("Exiting.")
 
 # Loading configuration file
