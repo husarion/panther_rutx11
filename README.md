@@ -62,7 +62,7 @@ This section can contain multiple arrays of below option:
             {
                 "radio":"0",
                 "ssid":"SSID_of_your_network",
-                'password':"password_to_your_network",
+                "password":"password_to_your_network",
 
             }
 
@@ -77,11 +77,11 @@ This section can contain multiple arrays of below option:
 
             {
                 "ssid":"SSID_of_your_network",
-                'password':"password_to_your_network"
+                "password":"password_to_your_network"
             },
             {
                 "ssid":"SSID_of_your_second_network",
-                'password':"password_to_your_second_network",
+                "password":"password_to_your_second_network",
             }
 
 
