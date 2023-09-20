@@ -59,12 +59,45 @@ def set_multi_wifi(ssid, password, priority):
     command += "uci set multi_wifi.@wifi-iface[-1].priority='{}'\n".format(priority)
     return command
 
+# Verify RUTX firmware version. Versions RUTX_R_00.07.02.07 and higher are supported.
+try:
+    output = ssh.run_command("cat /etc/version")
+    firmware_version_raw = None
+    for line in output.stdout:
+        firmware_version_raw = line
+    if firmware_version_raw == None:
+        secho("Could not verify RUTX11 firmware version. Exiting.", fg='red', bold=True)
+        sys.exit()    
+    firmware_version = str.split(firmware_version_raw,'.')
+    if firmware_version[0] != "RUTX_R_00":
+        secho("Could not verify RUTX11 firmware version. Obtained version string {}. Exiting.".format(firmware_version_raw), fg='red', bold=True)
+        sys.exit()  
+    elif int(firmware_version[1]) < 7 or (int(firmware_version[1]) == 7 and int(firmware_version[2]) < 2):
+        secho("Detected RUTX11 firmware version {} is not supported by this script.\nCheck https://husarion.com/manuals/panther/rutx11-firmware-update/ for help.\nExiting.".format(firmware_version_raw), fg='red', bold=True)
+        sys.exit()
+    elif int(firmware_version[1]) == 7 and int(firmware_version[2]) < 4:
+        secho("Detected RUTX11 firmware version {} is supported by this script.\nConsider updating RUTX11 firmware for stability and performance improvemets.\nCheck https://husarion.com/manuals/panther/rutx11-firmware-update/ for help.".format(firmware_version_raw), fg='yellow', bold=True)
+    else:
+        secho("Detected RUTX11 firmware version {} is supported by this script.".format(firmware_version_raw), fg='green', bold=True)                 
+
+except pssh.exceptions.AuthenticationError as e:
+    secho("SSH connection failed. Most likely there is no / not valid SSH public key on router.", fg='red', bold=True)
+    secho(e)
+    sys.exit("Exiting.")
+except pssh.exceptions.SessionError as e:
+    secho("SSH connection failed.", fg='red', bold=True)
+    secho(e)
+    sys.exit("Exiting.")
 
 # Loading configuration file
 try:
     path = os.path.join(os.path.dirname(os.path.realpath(__file__)), config_file)
     config = open(path,'r')
     config = json.load(config)
+except json.JSONDecodeError as e:
+    secho("Could not parse configuration file.", fg='red', bold=True)
+    secho("{}".format(e), fg='red')
+    sys.exit("Exiting.")
 except:
     secho("Could not load configuration file.", fg='red', bold=True)
     sys.exit("Exiting.")
