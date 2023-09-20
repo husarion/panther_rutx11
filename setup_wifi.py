@@ -17,7 +17,7 @@ import time
 allowed_radio = ['0', '1']
 
 host = '10.15.20.1' # IP adress of RUTX11
-user_name = "root"
+user_name = 'root'
 config_file = 'config.json' 
 reconfigure_wifi = False
 reconfigure_client = False
@@ -28,18 +28,18 @@ ssh = SSHClient(host, user=user_name, timeout=5, num_retries=1)
 def multi_wifi_config_validator(data, name):
     for index, key in enumerate(data, start=1):
         try:
-            if key["ssid"] == '':
+            if key['ssid'] == '':
                 raise KeyError
             
         except KeyError:
             secho("No SSID for {} entry {}".format(name, index), fg='red', bold=True)
             sys.exit("Exiting.")
         try:
-            key["password"]
-            if len(key["password"]) < 8:
-                if key["password"] == '':
+            key['password']
+            if len(key['password']) < 8:
+                if key['password'] == '':
                     secho("No password for {} entry {}. Assuming open network. Make sure it is correct.".format(name, index))
-                    key["password"] = None
+                    key['password'] = None
                 else:
                     raise ValueError("Password for {} entry {} is shorter than minimal lenght of 8".format(name, index))
                 
@@ -48,7 +48,7 @@ def multi_wifi_config_validator(data, name):
             sys.exit("Exiting.")
         except KeyError:
             secho("No password for {} entry {}. Assuming open network. Make sure it is correct.".format(name, index), fg='yellow', bold=True)
-            key["password"] = None
+            key['password'] = None
 
 def set_multi_wifi(ssid, password, priority):
     command = "uci add multi_wifi wifi-iface\n"
@@ -72,17 +72,17 @@ except:
 # Verify if wifi_client config is present and valid
 cmd = ""
 try:
-    config["wifi_client"]
+    config['wifi_client']
 except KeyError:
     secho("wifi_client section not defined, skipping client configuration")
 else:
-    multi_wifi_config_validator(config["wifi_client"], "wifi_client")
-    for priority, key in enumerate(config["wifi_client"], start=1):
-        cmd += set_multi_wifi(key["ssid"], key["password"], priority)
+    multi_wifi_config_validator(config['wifi_client'], 'wifi_client')
+    for priority, key in enumerate(config['wifi_client'], start=1):
+        cmd += set_multi_wifi(key['ssid'], key['password'], priority)
     if debug_flag == True:
         secho(cmd)
     try:
-        wifi_client_radio = config["wifi_client_radio"]
+        wifi_client_radio = config['wifi_client_radio']
         if wifi_client_radio not in [0,1,'0','1']:
             raise TypeError("Allowed values for wifi_client_radio is 0 or 1.")
             sys.exit("Exiting.")
@@ -122,9 +122,9 @@ time.sleep(10)
 try_count = 1
 auth_fail_time = None
 kernel_time = None
-while subprocess.call(['ping','8.8.8.8','-c','1',"-W","1"], stdout=subprocess.DEVNULL):
+while subprocess.call(['ping','8.8.8.8','-c','1','-W','1'], stdout=subprocess.DEVNULL):
     time.sleep(10)
-    secho("Waiting for establishing internet connection. Try {}/50".format(try_count))
+    secho("Waiting to establish an internet connection. Try {}/50".format(try_count))
     try_count += 1
 
     if try_count > 50:
