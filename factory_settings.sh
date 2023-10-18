@@ -62,15 +62,12 @@ ssh root@$rutx11_ip << EOF
     uci set gps.gpsd.enabled='1'
     uci set gps.gpsd.galileo_sup='1'
     uci set gps.gpsd.glonass_sup='7'
-    uci set gps.gpsd.beidou_sup='0'
+    uci set gps.gpsd.beidou_sup='3'
     
     uci set gps.nmea_forwarding.enabled='1'
     uci set gps.nmea_forwarding.hostname='10.15.20.2'
     uci set gps.nmea_forwarding.port='5000'
     uci set gps.nmea_forwarding.proto='udp'
-
-    uci set gps.https.enabled='1'
-    uci set gps.https.hostname='10.15.20.2'
 
     uci set gps.GPGSV.forwarding_enabled='1'
     uci set gps.GPGSV.forwarding_interval='1'
