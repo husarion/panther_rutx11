@@ -42,6 +42,7 @@ ssh root@$rutx11_ip << EOF
     uci set dhcp.lan.letter='h'
     uci set network.lan.ipaddr='10.15.20.1'
 
+    uci set network.wan.disabled='1'
     uci set network.wan.auto='0'
     uci set network.lan.ifname='eth0 eth1'
 
@@ -56,21 +57,17 @@ ssh root@$rutx11_ip << EOF
     uci set ntpclient.@ntpclient[0].gps_sync='1'
     uci set ntpclient.@ntpclient[0].gps_interval='86400'
 
-
-    uci set rms_connect_mqtt.rms_connect_mqtt.enable='0'
+    uci set rms_mqtt.rms_connect_mqtt.enable='0'
 
     uci set gps.gpsd.enabled='1'
     uci set gps.gpsd.galileo_sup='1'
     uci set gps.gpsd.glonass_sup='7'
-    uci set gps.gpsd.beidou_sup='0'
+    uci set gps.gpsd.beidou_sup='3'
     
     uci set gps.nmea_forwarding.enabled='1'
     uci set gps.nmea_forwarding.hostname='10.15.20.2'
     uci set gps.nmea_forwarding.port='5000'
     uci set gps.nmea_forwarding.proto='udp'
-
-    uci set gps.https.enabled='1'
-    uci set gps.https.hostname='10.15.20.2'
 
     uci set gps.GPGSV.forwarding_enabled='1'
     uci set gps.GPGSV.forwarding_interval='1'
