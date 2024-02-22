@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 
 # Script for changing MultiAP WiFi settings in Teltonika RUTX11.
-# Requires RUTX11 device with configuration set by factory_settings.sh script - by default done by Husarion during production.  
+# Requires RUTX11 device with configuration set by factory_settings.sh script - by default done by Husarion during production.
 
 from click import secho
 import io
 import json
 import os
 from pssh.clients import SSHClient
-import pssh.exceptions 
+import pssh.exceptions
 import subprocess
 import sys
 import time
@@ -18,7 +18,7 @@ allowed_radio = ['0', '1']
 
 host = '10.15.20.1' # IP adress of RUTX11
 user_name = 'root'
-config_file = 'config.json' 
+config_file = 'config.json'
 reconfigure_wifi = False
 reconfigure_client = False
 debug_flag = False # if true print debug messages
@@ -41,7 +41,7 @@ def multi_wifi_config_validator(data, name):
         try:
             if key['ssid'] == '':
                 raise KeyError
-            
+
         except KeyError:
             secho("No SSID for {} entry {}".format(name, index), fg='red', bold=True)
             sys.exit("Exiting.")
@@ -53,7 +53,7 @@ def multi_wifi_config_validator(data, name):
                     key['password'] = None
                 else:
                     raise ValueError("Password for {} entry {} is shorter than minimal lenght of 8".format(name, index))
-                
+
         except ValueError as e:
             secho(e, fg='red', bold=True)
             sys.exit("Exiting.")
@@ -78,18 +78,18 @@ try:
         firmware_version_raw = line
     if firmware_version_raw == None:
         secho("Could not verify RUTX11 firmware version. Exiting.", fg='red', bold=True)
-        sys.exit()    
+        sys.exit()
     firmware_version = str.split(firmware_version_raw,'.')
     if firmware_version[0] != "RUTX_R_00":
         secho("Could not verify RUTX11 firmware version. Obtained version string {}. Exiting.".format(firmware_version_raw), fg='red', bold=True)
-        sys.exit()  
+        sys.exit()
     elif int(firmware_version[1]) < 7 or (int(firmware_version[1]) == 7 and int(firmware_version[2]) < 2):
         secho("Detected RUTX11 firmware version {} is not supported by this script.\nCheck https://husarion.com/manuals/panther/rutx11-support/ for help.\nExiting.".format(firmware_version_raw), fg='red', bold=True)
         sys.exit()
     elif int(firmware_version[1]) == 7 and int(firmware_version[2]) < 4:
         secho("Detected RUTX11 firmware version {} is supported by this script.\nConsider updating RUTX11 firmware for stability and performance improvemets.\nCheck https://husarion.com/manuals/panther/rutx11-support/ for help.".format(firmware_version_raw), fg='yellow', bold=True)
     else:
-        secho("Detected RUTX11 firmware version {} is supported by this script.".format(firmware_version_raw), fg='green', bold=True)                 
+        secho("Detected RUTX11 firmware version {} is supported by this script.".format(firmware_version_raw), fg='green', bold=True)
 
 except pssh.exceptions.SessionError as e:
     secho("SSH connection failed.", fg='red', bold=True)
@@ -130,7 +130,7 @@ else:
     except KeyError:
         secho("wifi_client_radio not defined, assuming 2.4GHz radio", fg='yellow')
         wifi_client_radio = 0
-        
+
     reconfigure_multi_wifi = True
 
 if reconfigure_multi_wifi:
@@ -140,7 +140,7 @@ if reconfigure_multi_wifi:
         used_radio = None
         for line in output.stdout:
             used_radio = line
-            if debug_flag == True:    
+            if debug_flag == True:
                 secho(used_radio)
         if used_radio != 'radio' + str(wifi_client_radio):
             cmd += "uci set wireless.multi_wifi.device='radio" + str(wifi_client_radio) + "';"
@@ -154,7 +154,7 @@ if reconfigure_multi_wifi:
         sys.exit("Exiting.")
     else:
         secho("Router configuration saved")
-    
+
 # Wait till uplink is established - checking via ping to 8.8.8.8 is successful
 # Wait 10 seconds to allow router reconfiguration
 secho("Pinging 8.8.8.8 to check for internet connection. It can take up to 8 minutes (depending on choosen radio).", fg='yellow', bold=True)
@@ -183,7 +183,7 @@ while subprocess.call(['ping','8.8.8.8','-c','1','-W','1'], stdout=subprocess.DE
             secho(auth_fail_time)
     except pssh.exceptions.ConnectionError:
         secho("SSH connection failed, configuration not applied", fg='red', bold=True)
-        sys.exit("Exiting.")            
+        sys.exit("Exiting.")
     if auth_fail_time != None:
         auth_fail_time = auth_fail_time[:-1]
     else:
@@ -202,10 +202,7 @@ else:
     try:
         if config['husarnet']['join_code'] == "your_join_code":
             secho("Your Husarnet joincode is incorrect, skipping Husarnet configuration")
-        else:        
-            subprocess.run(["sudo husarnet " + config['husarnet']['joincode'] + " " + config['husarnet']['hostname']], shell=True)
+        else:
+            subprocess.run(["sudo husarnet join " + config['husarnet']['join_code'] + " " + config['husarnet']['hostname']], shell=True)
     except KeyError:
         secho("Hostname or joincode not defined in husarnet configuration")
-
-
-
