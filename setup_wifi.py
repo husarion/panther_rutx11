@@ -203,7 +203,7 @@ else:
         if config['husarnet']['join_code'] == "your_join_code":
             secho("Your Husarnet joincode is incorrect, skipping Husarnet configuration")
         else:        
-            subprocess.run(["sudo husarnet " + config['husarnet']['joincode'] + " " + config['husarnet']['hostname']], shell=True)
+            subprocess.run(["sudo husarnet " + config['husarnet']['join_code'] + " " + config['husarnet']['hostname']], shell=True)
     except KeyError:
         secho("Hostname or joincode not defined in husarnet configuration")
 
