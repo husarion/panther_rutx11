@@ -25,7 +25,7 @@ debug_flag = False # if true print debug messages
 try:
     ssh = SSHClient(host, user=user_name, timeout=5, num_retries=1)
 except pssh.exceptions.AuthenticationError as e:
-    secho("SSH connection failed. Most likely there is no / not valid SSH public key on router. https://husarion.com/manuals/panther/rutx11-support/", fg='red', bold=True)
+    secho("SSH connection failed. Most likely there is no / not valid SSH public key on router. https://husarion.com/manuals/panther/troubleshooting/#rutx11-issues", fg='red', bold=True)
     sys.exit("Exiting.")
 except pssh.exceptions.SessionError as e:
     secho("SSH connection failed.", fg='red', bold=True)
@@ -34,7 +34,7 @@ except pssh.exceptions.SSHError as e:
     secho("SSH connection failed.", fg='red', bold=True)
     sys.exit("Exiting.")
 except pssh.exceptions.ConnectionError as e:
-    secho("SSH connection failed. Most likely router is not available or on difrent IP. https://husarion.com/manuals/panther/rutx11-support/", fg='red', bold=True)
+    secho("SSH connection failed. Most likely router is not available or on difrent IP. https://husarion.com/manuals/panther/troubleshooting/#rutx11-issues", fg='red', bold=True)
     sys.exit("Exiting.")
 def multi_wifi_config_validator(data, name):
     for index, key in enumerate(data, start=1):
