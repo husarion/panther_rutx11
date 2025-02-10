@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/home/husarion/panther_rutx11/.venv/bin/python3
 
 # Script for changing MultiAP WiFi settings in Teltonika RUTX11.
 # Requires RUTX11 device with configuration set by factory_settings.sh script - by default done by Husarion during production.
