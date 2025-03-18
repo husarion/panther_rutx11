@@ -31,18 +31,11 @@ class RUTX11Manager:
         self._username = username
         self._password = password
         self._token = None
-
         self._request_url = "https://" + self._device_ip
-
-        self._rpi_serial = self._get_rpi_serial()
-        self._rpi_mac = self._get_rpi_mac()
-
-        print("Raspberry Pi serial: ", self._rpi_serial)
-        print("Raspberry Pi MAC: ", self._rpi_mac)
 
         self._login()
 
-    def factory_settings(self) -> None:
+    def factory_reset(self) -> None:
         self._configure_dhcp()
         self._configure_interfaces_lan()
         self._configure_ntp_client()
@@ -269,6 +262,7 @@ class RUTX11Manager:
         print("Wireless devices configured successfully")
 
     def _configure_wireless_interfaces(self) -> None:
+        rpi_serial = self._get_rpi_serial()
         robot_model = os.getenv("ROBOT_MODEL", "PTH")
         prefix = "Lynx_" if robot_model == "LNX" else "Panther_"
 
@@ -276,12 +270,12 @@ class RUTX11Manager:
             "data": [
                 {
                     "id": "default_radio0",
-                    "ssid": prefix + self._rpi_serial,
+                    "ssid": prefix + rpi_serial,
                     "key": "husarion",
                 },
                 {
                     "id": "default_radio1",
-                    "ssid": prefix + "5G_" + self._rpi_serial,
+                    "ssid": prefix + "5G_" + rpi_serial,
                     "key": "husarion",
                 },
             ]
@@ -320,7 +314,7 @@ class RUTX11Manager:
             "data": {
                 "id": "host",
                 "ip": "10.15.20.2",
-                "mac": self._rpi_mac,
+                "mac": self._get_rpi_mac(),
                 "name": "rpi",
             },
         }
@@ -353,7 +347,7 @@ import argparse
 
 def main(args=None):
     parser = argparse.ArgumentParser(description="RUTX11 Manager")
-    parser.add_argument("--restore-default", action="store_false", help="Restore default settings")
+    parser.add_argument("--restore-default", action="store_true", help="Restore default settings")
     parsed_args = parser.parse_args(args)
 
     username = input("Enter the username: ")
@@ -361,7 +355,8 @@ def main(args=None):
     manager = RUTX11Manager(username=username, password=password)
 
     if parsed_args.restore_default:
-        manager.factory_settings()
+        print("Restoring default settings")
+        manager.factory_reset()
         manager.reboot()
         return
 
