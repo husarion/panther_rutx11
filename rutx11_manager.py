@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
+import argparse
 import click
+import getpass
 import json
 import os
 import requests
@@ -31,7 +33,11 @@ class RUTX11Manager:
         self._username = username
         self._password = password
         self._token = None
+        self._device_ip = device_ip
         self._request_url = "https://" + device_ip
+
+        if not self._is_available():
+            raise Exception(f"Device at {device_ip} is not available")
 
         self._login()
 
@@ -53,6 +59,21 @@ class RUTX11Manager:
         success, _ = self._request_post(RUTX11HTTPCommands.REBOOT, {})
         if not success:
             click.secho("Failed to reboot the router", fg="red")
+
+    def _is_available(self) -> bool:
+        try:
+            res = subprocess.run(
+                ["ping", "-c 1", "-w 1", self._device_ip],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            if res.returncode != 0:
+                return False
+        except subprocess.CalledProcessError:
+            return False
+
+        return True
 
     def _get_rpi_serial(self) -> str:
         try:
@@ -98,7 +119,7 @@ class RUTX11Manager:
         response = requests.post(url, json=data, verify=False)
         if response.status_code != 200:
             click.secho(f"Failed to connect: {json.dumps(response.json(), indent=2)}", fg="red")
-            raise Exception("Failed to connect")
+            raise Exception(f"Failed to connect")
 
         self._token = response.json()["data"]["token"]
         print("Logged in successfully")
@@ -428,9 +449,6 @@ class RUTX11Manager:
         return True, response
 
 
-import argparse
-
-
 def main(args=None):
     parser = argparse.ArgumentParser(description="RUTX11 Manager")
     parser.add_argument(
@@ -439,9 +457,15 @@ def main(args=None):
     parser.add_argument("--restore-default", action="store_true", help="Restore default settings")
     parsed_args = parser.parse_args(args)
 
-    username = input("Enter the username: ")
-    password = input("Enter the password: ")
-    manager = RUTX11Manager(username=username, password=password, device_ip=parsed_args.device_ip)
+    try:
+        username = input("Enter the username: ")
+        password = getpass.getpass("Enter the password: ")
+        manager = RUTX11Manager(
+            username=username, password=password, device_ip=parsed_args.device_ip
+        )
+    except Exception as err:
+        click.secho(f"Failed to create RUTX11Manager: {err}", fg="red")
+        return
 
     if parsed_args.restore_default:
         print("Restoring default settings")
