@@ -367,11 +367,12 @@ class RUTX11Manager:
             click.secho("Failed to get static leases.", fg="red")
             return
 
-        data_delete = {"data": [lease["id"] for lease in response.json()["data"]]}
-        success, _ = self._request_delete(RUTX11HTTPCommands.DHCP_STATIC_LEASES, data_delete)
-        if not success:
-            click.secho("Failed to delete static leases.", fg="red")
-            return
+        if response.json()["data"]:
+            data_delete = {"data": [lease["id"] for lease in response.json()["data"]]}
+            success, _ = self._request_delete(RUTX11HTTPCommands.DHCP_STATIC_LEASES, data_delete)
+            if not success:
+                click.secho("Failed to delete static leases.", fg="red")
+                return
 
         data = {
             "data": {
@@ -472,6 +473,8 @@ def main(args=None):
         manager.factory_reset()
         manager.reboot()
         return
+    
+    manager._configure_static_leases()
 
 
 if __name__ == "__main__":
