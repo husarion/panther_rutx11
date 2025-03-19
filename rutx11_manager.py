@@ -16,6 +16,7 @@ class RUTX11HTTPCommands:
     INTERFACES_LAN = "/api/interfaces/config/lan"
     INTERFACES_WAN = "/api/interfaces/config/wan"
     WIRELESS_DEVICES = "/api/wireless/devices/config"
+    WIRELESS_DEVICES_GLOBAL = "/api/wireless/devices/global"
     WIRELESS_INTERFACES = "/api/wireless/interfaces/config"
     GPS_GLOBAL = "/api/gps/global"
     GPS_NMEA_NMEA_FORWARDING = "/api/gps/nmea/config/nmea_forwarding"
@@ -26,23 +27,26 @@ class RUTX11HTTPCommands:
 
 
 class RUTX11Manager:
-    def __init__(self, username: str, password: str) -> None:
-        self._device_ip = "10.15.20.1"
+    def __init__(self, username: str, password: str, device_ip: str = "10.15.20.1") -> None:
         self._username = username
         self._password = password
         self._token = None
-        self._request_url = "https://" + self._device_ip
+        self._request_url = "https://" + device_ip
 
         self._login()
 
     def factory_reset(self) -> None:
         self._configure_dhcp()
+        self._configure_interfaces_wan()
+        self._configure_interfaces_wwan()
         self._configure_interfaces_lan()
+        self._configure_firewall()
         self._configure_ntp_client()
         self._configure_gps()
         self._configure_nmea()
         self._configure_wireless_devices()
         self._configure_wireless_interfaces()
+        self._configure_multi_ap_interface()
         self._configure_static_leases()
 
     def reboot(self) -> None:
@@ -109,6 +113,43 @@ class RUTX11Manager:
 
         print("DHCP configured successfully")
 
+    def _configure_interfaces_wan(self) -> None:
+        data = {
+            "data": [
+                {
+                    "id": id,
+                    "enabled": "0",
+                    "ifname": [],
+                }
+                for id in ["wan", "wan6"]
+            ]
+        }
+
+        response = self._request_put(RUTX11HTTPCommands.INTERFACES, data)
+        if response.status_code != 200:
+            print("Failed to configure WAN interface: ", json.dumps(response.json(), indent=2))
+            return
+
+        print("WAN interface configured successfully")
+
+    def _configure_interfaces_wwan(self) -> None:
+        data = {
+            "data": {
+                "area_type": "wan",
+                "id": "wwan",
+                "metric": "2",
+                "proto": "dhcp",
+                "name": "wwan",
+            }
+        }
+
+        response = self._request_post(RUTX11HTTPCommands.INTERFACES, data)
+        if response.status_code != 201:
+            print("Failed to configure WWAN interface: ", json.dumps(response.json(), indent=2))
+            return
+
+        print("WWAN interface configured successfully")
+
     def _configure_interfaces_lan(self) -> None:
         data = {
             "data": {
@@ -123,37 +164,6 @@ class RUTX11Manager:
             return
 
         print("LAN interface configured successfully")
-
-    def _configure_interfaces_wan(self) -> None:
-        data = {
-            "data": {
-                "enabled": "0",
-            }
-        }
-
-        response = self._request_put(RUTX11HTTPCommands.INTERFACES_WAN, data)
-        if response.status_code != 200:
-            print("Failed to configure WAN interface: ", json.dumps(response.json(), indent=2))
-            return
-
-        print("WAN interface configured successfully")
-
-    def _configure_interfaces_wwan(self) -> None:
-        data = {
-            "data": {
-                "area_type": "wan",
-                "id": "wwan",
-                "metric": "2",
-                "proto": "dhcp",
-            }
-        }
-
-        response = self._request_post(RUTX11HTTPCommands.INTERFACES, data)
-        if response.status_code != 201:
-            print("Failed to configure WWAN interface: ", json.dumps(response.json(), indent=2))
-            return
-
-        print("WWAN interface configured successfully")
 
     def _configure_firewall(self):
         data = {"data": {"network": ["wan", "wan6", "mob1s1a1", "mob1s2a1", "wwan"]}}
@@ -259,6 +269,13 @@ class RUTX11Manager:
             print("Failed to configure wireless devices: ", json.dumps(response.json(), indent=2))
             return
 
+        data = {"data": {"country": "PL"}}
+
+        response = self._request_put(RUTX11HTTPCommands.WIRELESS_DEVICES_GLOBAL, data)
+        if response.status_code != 200:
+            print("Failed to configure wireless devices: ", json.dumps(response.json(), indent=2))
+            return
+
         print("Wireless devices configured successfully")
 
     def _configure_wireless_interfaces(self) -> None:
@@ -293,9 +310,9 @@ class RUTX11Manager:
     def _configure_multi_ap_interface(self) -> None:
         data = {
             "data": {
-                # "id": "wifi-iface",
+                "id": "wifi-iface",
                 "network": "wwan",
-                "device": "radio0",
+                "device": ["radio1"],
                 "mode": "multi_ap",
                 "enabled": "1",
                 "scan_time": "30",
@@ -303,7 +320,7 @@ class RUTX11Manager:
         }
 
         response = self._request_post(RUTX11HTTPCommands.WIRELESS_INTERFACES, data)
-        if response == 201:
+        if response.status_code == 201:
             print("Failed to configure Multi AP interface: ", json.dumps(response.json(), indent=2))
             return
 
@@ -347,12 +364,15 @@ import argparse
 
 def main(args=None):
     parser = argparse.ArgumentParser(description="RUTX11 Manager")
+    parser.add_argument(
+        "-i", "--device-ip", type=str, default="10.15.20.1", help="Device IP address"
+    )
     parser.add_argument("--restore-default", action="store_true", help="Restore default settings")
     parsed_args = parser.parse_args(args)
 
     username = input("Enter the username: ")
     password = input("Enter the password: ")
-    manager = RUTX11Manager(username=username, password=password)
+    manager = RUTX11Manager(username=username, password=password, device_ip=parsed_args.device_ip)
 
     if parsed_args.restore_default:
         print("Restoring default settings")
