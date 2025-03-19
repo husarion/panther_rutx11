@@ -473,8 +473,6 @@ def main(args=None):
         manager.factory_reset()
         manager.reboot()
         return
-    
-    manager._configure_static_leases()
 
 
 if __name__ == "__main__":
