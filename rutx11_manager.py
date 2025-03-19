@@ -516,8 +516,8 @@ def main(args=None):
     parser.add_argument(
         "-i", "--device-ip", type=str, default="10.15.20.1", help="Device IP address"
     )
-    parser.add_argument("--wifi-connect", "-c", action="store_true", help="Connect to WiFi")
-    parser.add_argument("--wifi-disconnect", "-d", action="store_true", help="Disconnect from WiFi")
+    parser.add_argument("-c", "--wifi-connect", action="store_true", help="Connect to WiFi")
+    parser.add_argument("-d", "--wifi-disconnect", action="store_true", help="Disconnect from WiFi")
     parser.add_argument("--restore-default", action="store_true", help="Restore default settings")
     parsed_args = parser.parse_args(args)
 
