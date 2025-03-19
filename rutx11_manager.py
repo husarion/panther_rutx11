@@ -9,7 +9,7 @@ import subprocess
 
 class RUTX11HTTPCommands:
     LOGIN = "/api/login"
-    REBOOT = "/system/actions/reboot"
+    REBOOT = "/api/system/actions/reboot"
     DHCP_SERVER_LAN = "/api/dhcp/servers/ipv4/config/lan"
     DHCP_STATIC_LEASES = "/api/dhcp/static_leases/ipv4/config"
     INTERFACES = "/api/interfaces/config"
@@ -50,9 +50,9 @@ class RUTX11Manager:
         self._configure_static_leases()
 
     def reboot(self) -> None:
-        response = self._request_post(RUTX11HTTPCommands.REBOOT, {})
-        if response.status_code != 200:
-            print("Failed to reboot the router")
+        success, _ = self._request_post(RUTX11HTTPCommands.REBOOT, {})
+        if not success:
+            click.secho("Failed to reboot the router", fg="red")
 
     def _get_rpi_serial(self) -> str:
         try:
@@ -97,7 +97,7 @@ class RUTX11Manager:
 
         response = requests.post(url, json=data, verify=False)
         if response.status_code != 200:
-            print("Failed to connect: ", json.dumps(response.json(), indent=2))
+            click.secho(f"Failed to connect: {json.dumps(response.json(), indent=2)}", fg="red")
             raise Exception("Failed to connect")
 
         self._token = response.json()["data"]["token"]
@@ -106,9 +106,9 @@ class RUTX11Manager:
     def _configure_dhcp(self) -> None:
         data = {"data": {"leasetime": "12h"}}
 
-        response = self._request_put(RUTX11HTTPCommands.DHCP_SERVER_LAN, data)
-        if response.status_code != 200:
-            print("Failed to configure DHCP: ", json.dumps(response.json(), indent=2))
+        success, _ = self._request_put(RUTX11HTTPCommands.DHCP_SERVER_LAN, data)
+        if not success:
+            click.secho("Failed to configure DHCP.", fg="red")
             return
 
         print("DHCP configured successfully")
@@ -125,9 +125,9 @@ class RUTX11Manager:
             ]
         }
 
-        response = self._request_put(RUTX11HTTPCommands.INTERFACES, data)
-        if response.status_code != 200:
-            print("Failed to configure WAN interface: ", json.dumps(response.json(), indent=2))
+        success, _ = self._request_put(RUTX11HTTPCommands.INTERFACES, data)
+        if not success:
+            click.secho("Failed to configure WAN interface.", fg="red")
             return
 
         print("WAN interface configured successfully")
@@ -143,9 +143,9 @@ class RUTX11Manager:
             }
         }
 
-        response = self._request_post(RUTX11HTTPCommands.INTERFACES, data)
-        if response.status_code != 201:
-            print("Failed to configure WWAN interface: ", json.dumps(response.json(), indent=2))
+        success, _ = self._request_post(RUTX11HTTPCommands.INTERFACES, data)
+        if not success:
+            click.secho("Failed to configure WWAN interface.", fg="red")
             return
 
         print("WWAN interface configured successfully")
@@ -158,9 +158,9 @@ class RUTX11Manager:
             }
         }
 
-        response = self._request_put(RUTX11HTTPCommands.INTERFACES_LAN, data)
-        if response.status_code != 200:
-            print("Failed to configure LAN interface: ", json.dumps(response.json(), indent=2))
+        success, _ = self._request_put(RUTX11HTTPCommands.INTERFACES_LAN, data)
+        if not success:
+            click.secho("Failed to configure LAN interface.", fg="red")
             return
 
         print("LAN interface configured successfully")
@@ -168,9 +168,9 @@ class RUTX11Manager:
     def _configure_firewall(self):
         data = {"data": {"network": ["wan", "wan6", "mob1s1a1", "mob1s2a1", "wwan"]}}
 
-        response = self._request_put(RUTX11HTTPCommands.FIREWALL_ZONES_ID3, data)
-        if response.status_code != 200:
-            print("Failed to configure firewall: ", json.dumps(response.json(), indent=2))
+        success, _ = self._request_put(RUTX11HTTPCommands.FIREWALL_ZONES_ID3, data)
+        if not success:
+            click.secho("Failed to configure firewall.", fg="red")
             return
 
         print("Firewall configured successfully")
@@ -185,9 +185,9 @@ class RUTX11Manager:
             }
         }
 
-        response = self._request_put(RUTX11HTTPCommands.NTP_NTP_CLIENT, data)
-        if response.status_code != 200:
-            print("Failed to configure NTP client: ", json.dumps(response.json(), indent=2))
+        success, _ = self._request_put(RUTX11HTTPCommands.NTP_NTP_CLIENT, data)
+        if not success:
+            click.secho("Failed to configure NTP client.", fg="red")
             return
 
         print("NTP client configured successfully")
@@ -202,9 +202,9 @@ class RUTX11Manager:
             }
         }
 
-        response = self._request_put(RUTX11HTTPCommands.GPS_GLOBAL, data)
-        if response.status_code != 200:
-            print("Failed to configure GPS: ", json.dumps(response.json(), indent=2))
+        success, _ = self._request_put(RUTX11HTTPCommands.GPS_GLOBAL, data)
+        if not success:
+            click.secho("Failed to configure GPS.", fg="red")
             return
 
         print("GPS configured successfully")
@@ -218,9 +218,9 @@ class RUTX11Manager:
                 "hostname": "10.15.20.2",
             }
         }
-        response = self._request_put(RUTX11HTTPCommands.GPS_NMEA_NMEA_FORWARDING, data)
-        if response.status_code != 200:
-            print("Failed to configure NMEA: ", json.dumps(response.json(), indent=2))
+        success, _ = self._request_put(RUTX11HTTPCommands.GPS_NMEA_NMEA_FORWARDING, data)
+        if not success:
+            click.secho("Failed to configure NMEA.", fg="red")
             return
 
         data = {
@@ -246,9 +246,9 @@ class RUTX11Manager:
             ]
         }
 
-        response = self._request_put(RUTX11HTTPCommands.GPS_NMEA_RULES, data)
-        if response.status_code != 200:
-            print("Failed to configure NMEA rules: ", json.dumps(response.json(), indent=2))
+        success, _ = self._request_put(RUTX11HTTPCommands.GPS_NMEA_RULES, data)
+        if not success:
+            click.secho("Failed to configure NMEA rules.", fg="red")
             return
 
         print("NMEA configured successfully")
@@ -264,16 +264,16 @@ class RUTX11Manager:
             ]
         }
 
-        response = self._request_put(RUTX11HTTPCommands.WIRELESS_DEVICES, data)
-        if response.status_code != 200:
-            print("Failed to configure wireless devices: ", json.dumps(response.json(), indent=2))
+        success, _ = self._request_put(RUTX11HTTPCommands.WIRELESS_DEVICES, data)
+        if not success:
+            click.secho("Failed to configure wireless devices.", fg="red")
             return
 
         data = {"data": {"country": "PL"}}
 
-        response = self._request_put(RUTX11HTTPCommands.WIRELESS_DEVICES_GLOBAL, data)
-        if response.status_code != 200:
-            print("Failed to configure wireless devices: ", json.dumps(response.json(), indent=2))
+        success, _ = self._request_put(RUTX11HTTPCommands.WIRELESS_DEVICES_GLOBAL, data)
+        if not success:
+            click.secho("Failed to configure wireless devices.", fg="red")
             return
 
         print("Wireless devices configured successfully")
@@ -298,11 +298,9 @@ class RUTX11Manager:
             ]
         }
 
-        response = self._request_put(RUTX11HTTPCommands.WIRELESS_INTERFACES, data)
-        if response.status_code != 200:
-            print(
-                "Failed to configure wireless interfaces: ", json.dumps(response.json(), indent=2)
-            )
+        success, _ = self._request_put(RUTX11HTTPCommands.WIRELESS_INTERFACES, data)
+        if not success:
+            click.secho("Failed to configure wireless interfaces.", fg="red")
             return
 
         print("Wireless interfaces configured successfully")
@@ -319,9 +317,9 @@ class RUTX11Manager:
             }
         }
 
-        response = self._request_post(RUTX11HTTPCommands.WIRELESS_INTERFACES, data)
-        if response.status_code == 201:
-            print("Failed to configure Multi AP interface: ", json.dumps(response.json(), indent=2))
+        success, _ = self._request_post(RUTX11HTTPCommands.WIRELESS_INTERFACES, data)
+        if not success:
+            click.secho("Failed to configure Multi AP interface.", fg="red")
             return
 
         print("Multi AP interface configured successfully")
@@ -336,9 +334,9 @@ class RUTX11Manager:
             },
         }
 
-        response = self._request_post(RUTX11HTTPCommands.DHCP_STATIC_LEASES, data)
-        if response.status_code != 200:
-            print("Failed to configure static leases: ", json.dumps(response.json(), indent=2))
+        success, _ = self._request_post(RUTX11HTTPCommands.DHCP_STATIC_LEASES, data)
+        if not success:
+            click.secho("Failed to configure static leases.", fg="red")
             return
 
         print("Static leases configured successfully")
@@ -346,17 +344,47 @@ class RUTX11Manager:
     def _request_get(self, command: str, data: dict) -> requests.Response:
         url = self._request_url + command
         headers = {"Authorization": "Bearer " + self._token}
-        return requests.get(url, headers=headers, json=data, verify=False)
+
+        response = requests.get(url, headers=headers, json=data, verify=False)
+        if response.status_code != 200:
+            click.secho(
+                f"Failed to get data from {url}: {response.status_code} {response.reason}.",
+                fg="red",
+            )
+            click.secho(f"Server response: {json.dumps(response.json(), indent=2)}")
+            return False, response
+
+        return True, response
 
     def _request_put(self, command: str, data: dict) -> requests.Response:
         url = self._request_url + command
         headers = {"Authorization": "Bearer " + self._token}
-        return requests.put(url, headers=headers, json=data, verify=False)
+
+        response = requests.put(url, headers=headers, json=data, verify=False)
+        if response.status_code != 200:
+            click.secho(
+                f"Failed to put data for {url}: {response.status_code} {response.reason}.",
+                fg="red",
+            )
+            click.secho(f"Server response: {json.dumps(response.json(), indent=2)}")
+            return False, response
+
+        return True, response
 
     def _request_post(self, command: str, data: dict) -> requests.Response:
         url = self._request_url + command
         headers = {"Authorization": "Bearer " + self._token}
-        return requests.post(url, headers=headers, json=data, verify=False)
+
+        response = requests.post(url, headers=headers, json=data, verify=False)
+        if response.status_code != 200 or response.status_code == 201:
+            click.secho(
+                f"Failed to post data for {url}: {response.status_code} {response.reason}.",
+                fg="red",
+            )
+            click.secho(f"Server response: {json.dumps(response.json(), indent=2)}")
+            return False, response
+
+        return True, response
 
 
 import argparse
