@@ -7,6 +7,7 @@ import json
 import os
 import requests
 import subprocess
+import time
 
 
 class RUTX11HTTPCommands:
@@ -20,6 +21,7 @@ class RUTX11HTTPCommands:
     WIRELESS_DEVICES = "/api/wireless/devices/config"
     WIRELESS_DEVICES_GLOBAL = "/api/wireless/devices/global"
     WIRELESS_INTERFACES = "/api/wireless/interfaces/config"
+    WIRELESS_MULTI_AP = "/api/wireless/multi_ap/config"
     GPS_GLOBAL = "/api/gps/global"
     GPS_NMEA_NMEA_FORWARDING = "/api/gps/nmea/config/nmea_forwarding"
     GPS_NMEA_RULES = "/api/gps/nmea/rules/config"
@@ -60,10 +62,69 @@ class RUTX11Manager:
         if not success:
             click.secho("Failed to reboot the router", fg="red")
 
+    def add_wifi_network(self, ssid: str, password: str) -> None:
+        success, response = self._request_get(RUTX11HTTPCommands.WIRELESS_MULTI_AP)
+        if not success:
+            click.secho("Failed to get WiFi networks", fg="red")
+            return
+
+        data = {
+            "data": {
+                "enabled": "1",
+                "ssid": ssid,
+                "key": password,
+            }
+        }
+
+        for network in response.json()["data"]:
+            if network["ssid"] == ssid:
+                click.secho("WiFi network already exists, updating password", fg="yellow")
+                success, _ = self._request_put(
+                    f"{RUTX11HTTPCommands.WIRELESS_MULTI_AP}/{network['id']}", data
+                )
+
+                if not success:
+                    click.secho("Failed to update WiFi network", fg="red")
+
+                print("WiFi network updated successfully")
+                return
+
+        success, _ = self._request_post(RUTX11HTTPCommands.WIRELESS_MULTI_AP, data)
+        if not success:
+            click.secho("Failed to add WiFi network", fg="red")
+
+        print("WiFi network added successfully")
+
+    def remove_wifi_network(self, ssid: str) -> None:
+        success, response = self._request_get(RUTX11HTTPCommands.WIRELESS_MULTI_AP)
+        if not success:
+            click.secho("Failed to get WiFi networks", fg="red")
+            return
+
+        for network in response.json()["data"]:
+            if network["ssid"] == ssid:
+                success, _ = self._request_delete(
+                    f"{RUTX11HTTPCommands.WIRELESS_MULTI_AP}/{network['id']}", {}
+                )
+
+                if not success:
+                    click.secho("Failed to remove WiFi network", fg="red")
+
+                print("WiFi network removed successfully")
+                return
+
+        click.secho("WiFi network not found", fg="yellow")
+
+    def check_internet_connection(self) -> bool:
+        return self._ping_ip("8.8.8.8")
+
     def _is_available(self) -> bool:
+        return self._ping_ip(self._device_ip)
+
+    def _ping_ip(self, ip: str) -> bool:
         try:
             res = subprocess.run(
-                ["ping", "-c 1", "-w 1", self._device_ip],
+                ["ping", "-c 1", "-w 1", ip],
                 capture_output=True,
                 text=True,
                 check=True,
@@ -455,6 +516,8 @@ def main(args=None):
     parser.add_argument(
         "-i", "--device-ip", type=str, default="10.15.20.1", help="Device IP address"
     )
+    parser.add_argument("--wifi-connect", "-c", action="store_true", help="Connect to WiFi")
+    parser.add_argument("--wifi-disconnect", "-d", action="store_true", help="Disconnect from WiFi")
     parser.add_argument("--restore-default", action="store_true", help="Restore default settings")
     parsed_args = parser.parse_args(args)
 
@@ -473,6 +536,31 @@ def main(args=None):
         manager.factory_reset()
         manager.reboot()
         return
+
+    if parsed_args.wifi_disconnect:
+        print("Disconnecting from WiFi")
+        ssid = input("Enter the WiFi SSID: ")
+        manager.remove_wifi_network(ssid)
+
+    if parsed_args.wifi_connect:
+        print("Connecting to WiFi")
+        ssid = input("Enter the WiFi SSID: ")
+        password = getpass.getpass("Enter the password: ")
+        manager.add_wifi_network(ssid, password)
+
+        try_count = 1
+        while not manager.check_internet_connection():
+            if try_count >= 50:
+                click.secho(
+                    "Failed to connect to the internet. Check SSID name and password", fg="red"
+                )
+                break
+
+            print(f"Waiting to establish an internet connection. Try {try_count}/50")
+            time.sleep(10)
+            try_count += 1
+
+        print("Connected to Internet")
 
 
 if __name__ == "__main__":
