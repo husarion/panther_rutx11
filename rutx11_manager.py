@@ -306,6 +306,22 @@ class RUTX11Manager:
         print("Wireless interfaces configured successfully")
 
     def _configure_multi_ap_interface(self) -> None:
+        success, response = self._request_get(RUTX11HTTPCommands.WIRELESS_INTERFACES)
+        if not success:
+            click.secho("Failed to get wireless interfaces.", fg="red")
+            return
+
+        for iface in response.json()["data"]:
+            if iface["mode"] == "multi_ap":
+                print("Deleting existing Multi AP interface")
+                success, _ = self._request_delete(
+                    RUTX11HTTPCommands.WIRELESS_INTERFACES, {"data": [iface["id"]]}
+                )
+                if not success:
+                    click.secho("Failed to delete existing Multi AP interface.", fg="red")
+                    return
+                break
+
         data = {
             "data": {
                 "id": "wifi-iface",
@@ -325,9 +341,19 @@ class RUTX11Manager:
         print("Multi AP interface configured successfully")
 
     def _configure_static_leases(self) -> None:
+        success, response = self._request_get(RUTX11HTTPCommands.DHCP_STATIC_LEASES)
+        if not success:
+            click.secho("Failed to get static leases.", fg="red")
+            return
+
+        data_delete = {"data": [lease["id"] for lease in response.json()["data"]]}
+        success, _ = self._request_delete(RUTX11HTTPCommands.DHCP_STATIC_LEASES, data_delete)
+        if not success:
+            click.secho("Failed to delete static leases.", fg="red")
+            return
+
         data = {
             "data": {
-                "id": "host",
                 "ip": "10.15.20.2",
                 "mac": self._get_rpi_mac(),
                 "name": "rpi",
@@ -341,11 +367,11 @@ class RUTX11Manager:
 
         print("Static leases configured successfully")
 
-    def _request_get(self, command: str, data: dict) -> requests.Response:
+    def _request_get(self, command: str) -> tuple[bool, requests.Response]:
         url = self._request_url + command
         headers = {"Authorization": "Bearer " + self._token}
 
-        response = requests.get(url, headers=headers, json=data, verify=False)
+        response = requests.get(url, headers=headers, verify=False)
         if response.status_code != 200:
             click.secho(
                 f"Failed to get data from {url}: {response.status_code} {response.reason}.",
@@ -356,7 +382,7 @@ class RUTX11Manager:
 
         return True, response
 
-    def _request_put(self, command: str, data: dict) -> requests.Response:
+    def _request_put(self, command: str, data: dict) -> tuple[bool, requests.Response]:
         url = self._request_url + command
         headers = {"Authorization": "Bearer " + self._token}
 
@@ -371,14 +397,29 @@ class RUTX11Manager:
 
         return True, response
 
-    def _request_post(self, command: str, data: dict) -> requests.Response:
+    def _request_post(self, command: str, data: dict) -> tuple[bool, requests.Response]:
         url = self._request_url + command
         headers = {"Authorization": "Bearer " + self._token}
 
         response = requests.post(url, headers=headers, json=data, verify=False)
-        if response.status_code != 200 or response.status_code == 201:
+        if response.status_code != 200 and response.status_code != 201:
             click.secho(
                 f"Failed to post data for {url}: {response.status_code} {response.reason}.",
+                fg="red",
+            )
+            click.secho(f"Server response: {json.dumps(response.json(), indent=2)}")
+            return False, response
+
+        return True, response
+
+    def _request_delete(self, command: str, data: dict) -> requests.Response:
+        url = self._request_url + command
+        headers = {"Authorization": "Bearer " + self._token}
+
+        response = requests.delete(url, headers=headers, json=data, verify=False)
+        if response.status_code != 200:
+            click.secho(
+                f"Failed to delete object for {url}: {response.status_code} {response.reason}.",
                 fg="red",
             )
             click.secho(f"Server response: {json.dumps(response.json(), indent=2)}")
