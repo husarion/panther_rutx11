@@ -23,9 +23,9 @@ Configuration of the RUTX11 router can be performed using `rutx11_manager.py` sc
 
 - **-i DEVICE_IP, --device-ip DEVICE_IP** (default: *10.15.20.1*): Device IP address
 - **-c, --wifi-connect**: Connect to WiFi, program will ask for SSID and password of the network.
-- **-d, --wifi-disconnect**: Disconnect from WiFi, program will ask for SSID of the network to disconnect.
-- **--restore-default**: Restore default settings of the router. Should be executed from Built-in computer to assign correct Access-point names.
-
+- **-d, --wifi-disconnect**: Disconnect from WiFi, the program will ask for SSID of the network to disconnect.
+- **-s, --add-static-lease**: Add static lease, the program will ask for IP, MAC address and name of the lease.
+- **--restore-default**: Restore default settings of the router, the program will ask for robot model (PTH/LNX) and robot serial number.
 ### Example usage
 
 #### Connect to WiFi

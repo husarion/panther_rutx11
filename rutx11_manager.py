@@ -4,7 +4,6 @@ import argparse
 import click
 import getpass
 import json
-import os
 import requests
 import subprocess
 import time
@@ -43,7 +42,16 @@ class RUTX11Manager:
 
         self._login()
 
-    def factory_reset(self) -> None:
+    def factory_reset(self, robot_model: str, robot_serial_number: str) -> None:
+        if robot_model not in ["PTH", "LNX"]:
+            raise Exception("Invalid robot model. Valid options are 'PTH' or 'LNX'.")
+
+        if len(robot_serial_number) != 4:
+            raise Exception("Robot serial number must be 4 characters long")
+
+        self._robot_model = robot_model
+        self._robot_serial_number = robot_serial_number
+
         self._configure_dhcp()
         self._configure_interfaces_wan()
         self._configure_interfaces_wwan()
@@ -115,6 +123,36 @@ class RUTX11Manager:
 
         click.secho("WiFi network not found", fg="yellow")
 
+    def add_static_lease(self, ip: str, mac: str, name: str) -> None:
+        if ip == "" or mac == "" or name == "":
+            click.secho("IP, MAC and name are required", fg="red")
+            return
+
+        ip_parts = ip.split(".")
+        if len(ip_parts) != 4:
+            click.secho("Invalid IP address", fg="red")
+            return
+
+        mac_parts = mac.split(":")
+        if len(mac_parts) != 6:
+            click.secho("Invalid MAC address", fg="red")
+            return
+
+        data = {
+            "data": {
+                "ip": ip,
+                "mac": mac,
+                "name": name,
+            }
+        }
+
+        success, _ = self._request_post(RUTX11HTTPCommands.DHCP_STATIC_LEASES, data)
+        if not success:
+            click.secho("Failed to add static lease.", fg="red")
+            return
+
+        print("Static lease added successfully")
+
     def check_internet_connection(self) -> bool:
         return self._ping_ip("8.8.8.8")
 
@@ -135,40 +173,6 @@ class RUTX11Manager:
             return False
 
         return True
-
-    def _get_rpi_serial(self) -> str:
-        try:
-            result = subprocess.run(
-                ["awk", "/Serial/ {print $3}", "/proc/cpuinfo"],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-
-            rpi_serial = result.stdout.strip()[-4:]
-            if rpi_serial == "":
-                raise Exception("Serial number not found")
-
-            return rpi_serial
-        except Exception as err:
-            click.secho(
-                f"WARNING: Failed to get Raspberry Pi serial: {err} Assigning default '0000'",
-                fg="yellow",
-            )
-            return "0000"
-
-    def _get_rpi_mac(self) -> str:
-        try:
-            result = subprocess.run(
-                ["ethtool", "--show-permaddr", "eth0"], capture_output=True, text=True, check=True
-            )
-            return result.stdout.split()[-1].strip()
-        except Exception as err:
-            click.secho(
-                f"WARNING: Failed to get Raspberry Pi MAC: {err} \nAssigning default '00:00:00:00:00:00'",
-                fg="yellow",
-            )
-            return "00:00:00:00:00:00"
 
     def _login(self) -> None:
         url = self._request_url + RUTX11HTTPCommands.LOGIN
@@ -361,20 +365,18 @@ class RUTX11Manager:
         print("Wireless devices configured successfully")
 
     def _configure_wireless_interfaces(self) -> None:
-        rpi_serial = self._get_rpi_serial()
-        robot_model = os.getenv("ROBOT_MODEL", "PTH")
-        prefix = "Lynx_" if robot_model == "LNX" else "Panther_"
+        prefix = "Lynx_" if self._robot_model == "LNX" else "Panther_"
 
         data = {
             "data": [
                 {
                     "id": "default_radio0",
-                    "ssid": prefix + rpi_serial,
+                    "ssid": prefix + self._robot_serial_number,
                     "key": "husarion",
                 },
                 {
                     "id": "default_radio1",
-                    "ssid": prefix + "5G_" + rpi_serial,
+                    "ssid": prefix + "5G_" + self._robot_serial_number,
                     "key": "husarion",
                 },
             ]
@@ -434,19 +436,6 @@ class RUTX11Manager:
             if not success:
                 click.secho("Failed to delete static leases.", fg="red")
                 return
-
-        data = {
-            "data": {
-                "ip": "10.15.20.2",
-                "mac": self._get_rpi_mac(),
-                "name": "rpi",
-            },
-        }
-
-        success, _ = self._request_post(RUTX11HTTPCommands.DHCP_STATIC_LEASES, data)
-        if not success:
-            click.secho("Failed to configure static leases.", fg="red")
-            return
 
         print("Static leases configured successfully")
 
@@ -518,6 +507,7 @@ def main(args=None):
     )
     parser.add_argument("-c", "--wifi-connect", action="store_true", help="Connect to WiFi")
     parser.add_argument("-d", "--wifi-disconnect", action="store_true", help="Disconnect from WiFi")
+    parser.add_argument("-s", "--add-static-lease", action="store_true", help="Add static lease")
     parser.add_argument("--restore-default", action="store_true", help="Restore default settings")
     parsed_args = parser.parse_args(args)
 
@@ -533,13 +523,14 @@ def main(args=None):
 
     if parsed_args.restore_default:
         print("Restoring default settings")
-        manager.factory_reset()
+        robot_model = input("Enter the robot model (PTH/LNX): ")
+        robot_serial_number = input("Enter the robot serial number: ")
+        manager.factory_reset(robot_model, robot_serial_number)
         manager.reboot()
         return
 
     if parsed_args.wifi_disconnect:
         print("Disconnecting from WiFi")
-        ssid = input("Enter the WiFi SSID: ")
         manager.remove_wifi_network(ssid)
 
     if parsed_args.wifi_connect:
@@ -561,6 +552,12 @@ def main(args=None):
             try_count += 1
 
         print("Connected to Internet")
+
+    if parsed_args.add_static_lease:
+        ip = input("Enter the IP address: ")
+        mac = input("Enter the MAC address: ")
+        name = input("Enter the name: ")
+        manager.add_static_lease(ip, mac, name)
 
 
 if __name__ == "__main__":
