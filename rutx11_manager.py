@@ -7,6 +7,7 @@ import json
 import requests
 import subprocess
 import time
+import urllib3
 
 
 class RUTX11HTTPCommands:
@@ -31,6 +32,8 @@ class RUTX11HTTPCommands:
 
 class RUTX11Manager:
     def __init__(self, username: str, password: str, device_ip: str = "10.15.20.1") -> None:
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
         self._username = username
         self._password = password
         self._token = None
@@ -73,8 +76,7 @@ class RUTX11Manager:
     def add_wifi_network(self, ssid: str, password: str) -> None:
         success, response = self._request_get(RUTX11HTTPCommands.WIRELESS_MULTI_AP)
         if not success:
-            click.secho("Failed to get WiFi networks", fg="red")
-            return
+            raise Exception("Failed to get WiFi networks")
 
         data = {
             "data": {
@@ -92,22 +94,21 @@ class RUTX11Manager:
                 )
 
                 if not success:
-                    click.secho("Failed to update WiFi network", fg="red")
+                    raise Exception("Failed to update WiFi network")
 
                 print("WiFi network updated successfully")
                 return
 
         success, _ = self._request_post(RUTX11HTTPCommands.WIRELESS_MULTI_AP, data)
         if not success:
-            click.secho("Failed to add WiFi network", fg="red")
+            raise Exception("Failed to add WiFi network")
 
         print("WiFi network added successfully")
 
     def remove_wifi_network(self, ssid: str) -> None:
         success, response = self._request_get(RUTX11HTTPCommands.WIRELESS_MULTI_AP)
         if not success:
-            click.secho("Failed to get WiFi networks", fg="red")
-            return
+            raise Exception("Failed to get WiFi networks", fg="red")
 
         for network in response.json()["data"]:
             if network["ssid"] == ssid:
@@ -116,7 +117,7 @@ class RUTX11Manager:
                 )
 
                 if not success:
-                    click.secho("Failed to remove WiFi network", fg="red")
+                    raise Exception("Failed to remove WiFi network", fg="red")
 
                 print("WiFi network removed successfully")
                 return
@@ -125,18 +126,15 @@ class RUTX11Manager:
 
     def add_static_lease(self, ip: str, mac: str, name: str) -> None:
         if ip == "" or mac == "" or name == "":
-            click.secho("IP, MAC and name are required", fg="red")
-            return
+            raise Exception("IP, MAC and name are required", fg="red")
 
         ip_parts = ip.split(".")
         if len(ip_parts) != 4:
-            click.secho("Invalid IP address", fg="red")
-            return
+            raise Exception("Invalid IP address", fg="red")
 
         mac_parts = mac.split(":")
         if len(mac_parts) != 6:
-            click.secho("Invalid MAC address", fg="red")
-            return
+            raise Exception("Invalid MAC address", fg="red")
 
         data = {
             "data": {
@@ -148,8 +146,7 @@ class RUTX11Manager:
 
         success, _ = self._request_post(RUTX11HTTPCommands.DHCP_STATIC_LEASES, data)
         if not success:
-            click.secho("Failed to add static lease.", fg="red")
-            return
+            raise Exception("Failed to add static lease.", fg="red")
 
         print("Static lease added successfully")
 
@@ -531,33 +528,47 @@ def main(args=None):
 
     if parsed_args.wifi_disconnect:
         print("Disconnecting from WiFi")
-        manager.remove_wifi_network(ssid)
+        ssid = input("Enter the WiFi SSID: ")
+        try:
+            manager.remove_wifi_network(ssid)
+        except Exception as err:
+            click.secho(f"Failure: {err}", fg="red")
 
     if parsed_args.wifi_connect:
         print("Connecting to WiFi")
         ssid = input("Enter the WiFi SSID: ")
         password = getpass.getpass("Enter the password: ")
-        manager.add_wifi_network(ssid, password)
 
-        try_count = 1
+        try:
+            manager.add_wifi_network(ssid, password)
+        except Exception as err:
+            click.secho(f"Failure: {err}", fg="red")
+            return
+
+        start_time = time.time()
+        timeout = 180  # 3 minutes
+        print("Waiting to establish an internet connection. This may take few minutes.")
         while not manager.check_internet_connection():
-            if try_count >= 50:
+            time_diff = time.time() - start_time
+            if time_diff > timeout:
                 click.secho(
-                    "Failed to connect to the internet. Check SSID name and password", fg="red"
+                    "\nFailed to connect to the internet. Check SSID name and password", fg="red"
                 )
-                break
+                return
 
-            print(f"Waiting to establish an internet connection. Try {try_count}/50")
-            time.sleep(10)
-            try_count += 1
+            dots = "." * int(time_diff % 3 + 1)
+            print(f"\r{' ' * 4}\r{dots}", end="", flush=True)
 
-        print("Connected to Internet")
+        print("\nConnected to the Internet")
 
     if parsed_args.add_static_lease:
         ip = input("Enter the IP address: ")
         mac = input("Enter the MAC address: ")
         name = input("Enter the name: ")
-        manager.add_static_lease(ip, mac, name)
+        try:
+            manager.add_static_lease(ip, mac, name)
+        except Exception as err:
+            click.secho(f"Failure: {err}", fg="red")
 
 
 if __name__ == "__main__":
