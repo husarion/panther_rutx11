@@ -216,6 +216,10 @@ class RUTX11Manager:
         print("WAN interface configured successfully")
 
     def _configure_interfaces_wwan(self) -> None:
+        # Multi AP has to release wwan first. Removing it also removes the wwan interface so there
+        # is no need to do that after.
+        self._remove_multi_ap_interface()
+
         data = {
             "data": {
                 "area_type": "wan",
@@ -387,21 +391,7 @@ class RUTX11Manager:
         print("Wireless interfaces configured successfully")
 
     def _configure_multi_ap_interface(self) -> None:
-        success, response = self._request_get(RUTX11HTTPCommands.WIRELESS_INTERFACES)
-        if not success:
-            click.secho("Failed to get wireless interfaces.", fg="red")
-            return
-
-        for iface in response.json()["data"]:
-            if iface["mode"] == "multi_ap":
-                print("Deleting existing Multi AP interface")
-                success, _ = self._request_delete(
-                    RUTX11HTTPCommands.WIRELESS_INTERFACES, {"data": [iface["id"]]}
-                )
-                if not success:
-                    click.secho("Failed to delete existing Multi AP interface.", fg="red")
-                    return
-                break
+        self._remove_multi_ap_interface()
 
         data = {
             "data": {
@@ -435,6 +425,23 @@ class RUTX11Manager:
                 return
 
         print("Static leases configured successfully")
+
+    def _remove_multi_ap_interface(self) -> None:
+        success, response = self._request_get(RUTX11HTTPCommands.WIRELESS_INTERFACES)
+        if not success:
+            click.secho("Failed to get wireless interfaces.", fg="red")
+            return
+
+        for iface in response.json()["data"]:
+            if iface["mode"] == "multi_ap":
+                print("Deleting existing Multi AP interface")
+                success, _ = self._request_delete(
+                    RUTX11HTTPCommands.WIRELESS_INTERFACES, {"data": [iface["id"]]}
+                )
+                if not success:
+                    click.secho("Failed to delete existing Multi AP interface.", fg="red")
+                    return
+                break
 
     def _request_get(self, command: str) -> tuple[bool, requests.Response]:
         url = self._request_url + command
