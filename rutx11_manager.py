@@ -31,6 +31,13 @@ class RouterHTTPCommands:
     SYSTEM_DEVICE_STATUS = "/api/system/device/status"
 
 
+class RouterInterface:
+    name: str
+    firmware_version: str
+    lan_devices: list[str]
+    gps: bool
+
+
 class RouterManager:
     def __init__(self, username: str, password: str, device_ip: str = "10.15.20.1") -> None:
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -42,21 +49,15 @@ class RouterManager:
         self._request_url = "https://" + device_ip
         self._device_name = ""
         self._firmware_version = ""
+        self._router_interface = RouterInterface()
 
-        supported_device_names = ["RUTX11", "RUTX50", "RUTM50"]
+        self._supported_device_names = ["RUTX11", "RUTX50", "RUTM50"]
 
         if not self._is_available():
             raise Exception(f"Device at {device_ip} is not available")
 
         self._login()
         self._system_device_status()
-
-        if self._device_name not in supported_device_names:
-            click.secho(
-                f"{self._device_name} is not listed in supported devices, the script may not work as expected."
-                f" Supported devices are: {", ".join(supported_device_names)}",
-                fg="yellow",
-            )
 
     def factory_reset(self, robot_model: str, robot_serial_number: str) -> None:
         if robot_model not in ["PTH", "LNX"]:
@@ -79,7 +80,7 @@ class RouterManager:
         self._configure_multi_ap_interface()
         self._configure_static_leases()
 
-        if self._device_name != "RUTM50":
+        if self._router_interface.gps:
             self._configure_gps()
             self._configure_nmea()
 
@@ -209,12 +210,30 @@ class RouterManager:
 
         data = response.json()["data"]
 
-        self._device_name = data["static"]["device_name"]
-        self._firmware_version = data["static"]["fw_version"]
+        device_name = data["static"]["device_name"]
+        firmware_version = data["static"]["fw_version"]
 
         print("Device Status:")
-        print(f"  Device Name: {self._device_name}")
-        print(f"  Firmware version: {self._firmware_version}")
+        print(f"  Device Name: {device_name}")
+        print(f"  Firmware version: {firmware_version}")
+
+        if device_name not in self._supported_device_names:
+            click.secho(
+                f"{device_name} is not listed in supported devices, the script may not work as expected."
+                f" Supported devices are: {", ".join(self._supported_device_names)}",
+                fg="yellow",
+            )
+
+        self._router_interface = RouterInterface()
+        self._router_interface.name = device_name
+        self._router_interface.firmware_version = firmware_version
+
+        if device_name == "RUTM50":
+            self._router_interface.gps = False
+            self._router_interface.lan_devices = ["wan", "lan1", "lan2", "lan3", "lan4"]
+        else:
+            self._router_interface.gps = True
+            self._router_interface.lan_devices = ["eth0", "eth1"]
 
     def _configure_dhcp(self) -> None:
         data = {"data": {"leasetime": "12h"}}
@@ -268,16 +287,10 @@ class RouterManager:
         print("WWAN interface configured successfully")
 
     def _configure_interfaces_lan(self) -> None:
-        devices = (
-            ["eth0", "eth1"]
-            if self._device_name != "RUTM50"
-            else ["wan", "lan1", "lan2", "lan3", "lan4"]
-        )
-
         data = {
             "data": {
                 "ipaddr": "10.15.20.1",
-                "ifname": devices,
+                "ifname": self._router_interface.lan_devices,
             }
         }
 
