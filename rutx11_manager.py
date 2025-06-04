@@ -10,7 +10,7 @@ import time
 import urllib3
 
 
-class RUTX11HTTPCommands:
+class RouterHTTPCommands:
     LOGIN = "/api/login"
     REBOOT = "/api/system/actions/reboot"
     DHCP_SERVER_LAN = "/api/dhcp/servers/ipv4/config/lan"
@@ -28,9 +28,17 @@ class RUTX11HTTPCommands:
     NTP_NTP_CLIENT = "/api/date_time/ntp/client/config/ntpclient"
     RMS_ACTIONS_CONNECT = "/api/rms/actions/connect"
     FIREWALL_ZONES_ID3 = "/api/firewall/zones/config/3"
+    SYSTEM_DEVICE_STATUS = "/api/system/device/status"
 
 
-class RUTX11Manager:
+class RouterInterface:
+    name: str
+    firmware_version: str
+    lan_devices: list[str]
+    gps: bool
+
+
+class RouterManager:
     def __init__(self, username: str, password: str, device_ip: str = "10.15.20.1") -> None:
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -39,11 +47,15 @@ class RUTX11Manager:
         self._token = None
         self._device_ip = device_ip
         self._request_url = "https://" + device_ip
+        self._router_interface = RouterInterface()
+
+        self._supported_device_names = ["RUTX11", "RUTX50", "RUTM50"]
 
         if not self._is_available():
             raise Exception(f"Device at {device_ip} is not available")
 
         self._login()
+        self._system_device_status()
 
     def factory_reset(self, robot_model: str, robot_serial_number: str) -> None:
         if robot_model not in ["PTH", "LNX"]:
@@ -61,20 +73,22 @@ class RUTX11Manager:
         self._configure_interfaces_lan()
         self._configure_firewall()
         self._configure_ntp_client()
-        self._configure_gps()
-        self._configure_nmea()
         self._configure_wireless_devices()
         self._configure_wireless_interfaces()
         self._configure_multi_ap_interface()
         self._configure_static_leases()
 
+        if self._router_interface.gps:
+            self._configure_gps()
+            self._configure_nmea()
+
     def reboot(self) -> None:
-        success, _ = self._request_post(RUTX11HTTPCommands.REBOOT, {})
+        success, _ = self._request_post(RouterHTTPCommands.REBOOT, {})
         if not success:
             click.secho("Failed to reboot the router", fg="red")
 
     def add_wifi_network(self, ssid: str, password: str) -> None:
-        success, response = self._request_get(RUTX11HTTPCommands.WIRELESS_MULTI_AP)
+        success, response = self._request_get(RouterHTTPCommands.WIRELESS_MULTI_AP)
         if not success:
             raise Exception("Failed to get WiFi networks")
 
@@ -90,7 +104,7 @@ class RUTX11Manager:
             if network["ssid"] == ssid:
                 click.secho("WiFi network already exists, updating password", fg="yellow")
                 success, _ = self._request_put(
-                    f"{RUTX11HTTPCommands.WIRELESS_MULTI_AP}/{network['id']}", data
+                    f"{RouterHTTPCommands.WIRELESS_MULTI_AP}/{network['id']}", data
                 )
 
                 if not success:
@@ -99,21 +113,21 @@ class RUTX11Manager:
                 print("WiFi network updated successfully")
                 return
 
-        success, _ = self._request_post(RUTX11HTTPCommands.WIRELESS_MULTI_AP, data)
+        success, _ = self._request_post(RouterHTTPCommands.WIRELESS_MULTI_AP, data)
         if not success:
             raise Exception("Failed to add WiFi network")
 
         print("WiFi network added successfully")
 
     def remove_wifi_network(self, ssid: str) -> None:
-        success, response = self._request_get(RUTX11HTTPCommands.WIRELESS_MULTI_AP)
+        success, response = self._request_get(RouterHTTPCommands.WIRELESS_MULTI_AP)
         if not success:
             raise Exception("Failed to get WiFi networks", fg="red")
 
         for network in response.json()["data"]:
             if network["ssid"] == ssid:
                 success, _ = self._request_delete(
-                    f"{RUTX11HTTPCommands.WIRELESS_MULTI_AP}/{network['id']}", {}
+                    f"{RouterHTTPCommands.WIRELESS_MULTI_AP}/{network['id']}", {}
                 )
 
                 if not success:
@@ -144,7 +158,7 @@ class RUTX11Manager:
             }
         }
 
-        success, _ = self._request_post(RUTX11HTTPCommands.DHCP_STATIC_LEASES, data)
+        success, _ = self._request_post(RouterHTTPCommands.DHCP_STATIC_LEASES, data)
         if not success:
             raise Exception("Failed to add static lease.", fg="red")
 
@@ -172,7 +186,7 @@ class RUTX11Manager:
         return True
 
     def _login(self) -> None:
-        url = self._request_url + RUTX11HTTPCommands.LOGIN
+        url = self._request_url + RouterHTTPCommands.LOGIN
         data = {
             "username": self._username,
             "password": self._password,
@@ -186,10 +200,43 @@ class RUTX11Manager:
         self._token = response.json()["data"]["token"]
         print("Logged in successfully")
 
+    def _system_device_status(self) -> None:
+        success, response = self._request_get(RouterHTTPCommands.SYSTEM_DEVICE_STATUS)
+        if not success:
+            click.secho("Failed to get system device status.", fg="red")
+            return
+
+        data = response.json()["data"]
+
+        device_name = data["static"]["device_name"]
+        firmware_version = data["static"]["fw_version"]
+
+        print("Device Status:")
+        print(f"  Device Name: {device_name}")
+        print(f"  Firmware version: {firmware_version}")
+
+        if device_name not in self._supported_device_names:
+            click.secho(
+                f"{device_name} is not listed in supported devices, the script may not work as expected."
+                f" Supported devices are: {", ".join(self._supported_device_names)}",
+                fg="yellow",
+            )
+
+        self._router_interface = RouterInterface()
+        self._router_interface.name = device_name
+        self._router_interface.firmware_version = firmware_version
+
+        if device_name == "RUTM50":
+            self._router_interface.gps = False
+            self._router_interface.lan_devices = ["wan", "lan1", "lan2", "lan3", "lan4"]
+        else:
+            self._router_interface.gps = True
+            self._router_interface.lan_devices = ["eth0", "eth1"]
+
     def _configure_dhcp(self) -> None:
         data = {"data": {"leasetime": "12h"}}
 
-        success, _ = self._request_put(RUTX11HTTPCommands.DHCP_SERVER_LAN, data)
+        success, _ = self._request_put(RouterHTTPCommands.DHCP_SERVER_LAN, data)
         if not success:
             click.secho("Failed to configure DHCP.", fg="red")
             return
@@ -208,7 +255,7 @@ class RUTX11Manager:
             ]
         }
 
-        success, _ = self._request_put(RUTX11HTTPCommands.INTERFACES, data)
+        success, _ = self._request_put(RouterHTTPCommands.INTERFACES, data)
         if not success:
             click.secho("Failed to configure WAN interface.", fg="red")
             return
@@ -230,7 +277,7 @@ class RUTX11Manager:
             }
         }
 
-        success, _ = self._request_post(RUTX11HTTPCommands.INTERFACES, data)
+        success, _ = self._request_post(RouterHTTPCommands.INTERFACES, data)
         if not success:
             click.secho("Failed to configure WWAN interface.", fg="red")
             return
@@ -241,11 +288,11 @@ class RUTX11Manager:
         data = {
             "data": {
                 "ipaddr": "10.15.20.1",
-                "ifname": ["eth0", "eth1"],
+                "ifname": self._router_interface.lan_devices,
             }
         }
 
-        success, _ = self._request_put(RUTX11HTTPCommands.INTERFACES_LAN, data)
+        success, _ = self._request_put(RouterHTTPCommands.INTERFACES_LAN, data)
         if not success:
             click.secho("Failed to configure LAN interface.", fg="red")
             return
@@ -255,7 +302,7 @@ class RUTX11Manager:
     def _configure_firewall(self):
         data = {"data": {"network": ["wan", "wan6", "mob1s1a1", "mob1s2a1", "wwan"]}}
 
-        success, _ = self._request_put(RUTX11HTTPCommands.FIREWALL_ZONES_ID3, data)
+        success, _ = self._request_put(RouterHTTPCommands.FIREWALL_ZONES_ID3, data)
         if not success:
             click.secho("Failed to configure firewall.", fg="red")
             return
@@ -272,7 +319,7 @@ class RUTX11Manager:
             }
         }
 
-        success, _ = self._request_put(RUTX11HTTPCommands.NTP_NTP_CLIENT, data)
+        success, _ = self._request_put(RouterHTTPCommands.NTP_NTP_CLIENT, data)
         if not success:
             click.secho("Failed to configure NTP client.", fg="red")
             return
@@ -289,7 +336,7 @@ class RUTX11Manager:
             }
         }
 
-        success, _ = self._request_put(RUTX11HTTPCommands.GPS_GLOBAL, data)
+        success, _ = self._request_put(RouterHTTPCommands.GPS_GLOBAL, data)
         if not success:
             click.secho("Failed to configure GPS.", fg="red")
             return
@@ -305,7 +352,7 @@ class RUTX11Manager:
                 "hostname": "10.15.20.2",
             }
         }
-        success, _ = self._request_put(RUTX11HTTPCommands.GPS_NMEA_NMEA_FORWARDING, data)
+        success, _ = self._request_put(RouterHTTPCommands.GPS_NMEA_NMEA_FORWARDING, data)
         if not success:
             click.secho("Failed to configure NMEA.", fg="red")
             return
@@ -333,7 +380,7 @@ class RUTX11Manager:
             ]
         }
 
-        success, _ = self._request_put(RUTX11HTTPCommands.GPS_NMEA_RULES, data)
+        success, _ = self._request_put(RouterHTTPCommands.GPS_NMEA_RULES, data)
         if not success:
             click.secho("Failed to configure NMEA rules.", fg="red")
             return
@@ -351,14 +398,14 @@ class RUTX11Manager:
             ]
         }
 
-        success, _ = self._request_put(RUTX11HTTPCommands.WIRELESS_DEVICES, data)
+        success, _ = self._request_put(RouterHTTPCommands.WIRELESS_DEVICES, data)
         if not success:
             click.secho("Failed to configure wireless devices.", fg="red")
             return
 
         data = {"data": {"country": "PL"}}
 
-        success, _ = self._request_put(RUTX11HTTPCommands.WIRELESS_DEVICES_GLOBAL, data)
+        success, _ = self._request_put(RouterHTTPCommands.WIRELESS_DEVICES_GLOBAL, data)
         if not success:
             click.secho("Failed to configure wireless devices.", fg="red")
             return
@@ -383,7 +430,7 @@ class RUTX11Manager:
             ]
         }
 
-        success, _ = self._request_put(RUTX11HTTPCommands.WIRELESS_INTERFACES, data)
+        success, _ = self._request_put(RouterHTTPCommands.WIRELESS_INTERFACES, data)
         if not success:
             click.secho("Failed to configure wireless interfaces.", fg="red")
             return
@@ -404,7 +451,7 @@ class RUTX11Manager:
             }
         }
 
-        success, _ = self._request_post(RUTX11HTTPCommands.WIRELESS_INTERFACES, data)
+        success, _ = self._request_post(RouterHTTPCommands.WIRELESS_INTERFACES, data)
         if not success:
             click.secho("Failed to configure Multi AP interface.", fg="red")
             return
@@ -412,14 +459,14 @@ class RUTX11Manager:
         print("Multi AP interface configured successfully")
 
     def _configure_static_leases(self) -> None:
-        success, response = self._request_get(RUTX11HTTPCommands.DHCP_STATIC_LEASES)
+        success, response = self._request_get(RouterHTTPCommands.DHCP_STATIC_LEASES)
         if not success:
             click.secho("Failed to get static leases.", fg="red")
             return
 
         if response.json()["data"]:
             data_delete = {"data": [lease["id"] for lease in response.json()["data"]]}
-            success, _ = self._request_delete(RUTX11HTTPCommands.DHCP_STATIC_LEASES, data_delete)
+            success, _ = self._request_delete(RouterHTTPCommands.DHCP_STATIC_LEASES, data_delete)
             if not success:
                 click.secho("Failed to delete static leases.", fg="red")
                 return
@@ -427,7 +474,7 @@ class RUTX11Manager:
         print("Static leases configured successfully")
 
     def _remove_multi_ap_interface(self) -> None:
-        success, response = self._request_get(RUTX11HTTPCommands.WIRELESS_INTERFACES)
+        success, response = self._request_get(RouterHTTPCommands.WIRELESS_INTERFACES)
         if not success:
             click.secho("Failed to get wireless interfaces.", fg="red")
             return
@@ -436,7 +483,7 @@ class RUTX11Manager:
             if iface["mode"] == "multi_ap":
                 print("Deleting existing Multi AP interface")
                 success, _ = self._request_delete(
-                    RUTX11HTTPCommands.WIRELESS_INTERFACES, {"data": [iface["id"]]}
+                    RouterHTTPCommands.WIRELESS_INTERFACES, {"data": [iface["id"]]}
                 )
                 if not success:
                     click.secho("Failed to delete existing Multi AP interface.", fg="red")
@@ -505,7 +552,7 @@ class RUTX11Manager:
 
 
 def main(args=None):
-    parser = argparse.ArgumentParser(description="RUTX11 Manager")
+    parser = argparse.ArgumentParser(description="Router Manager")
     parser.add_argument(
         "-i", "--device-ip", type=str, default="10.15.20.1", help="Device IP address"
     )
@@ -518,11 +565,11 @@ def main(args=None):
     try:
         username = input("Enter the username: ")
         password = getpass.getpass("Enter the password: ")
-        manager = RUTX11Manager(
+        manager = RouterManager(
             username=username, password=password, device_ip=parsed_args.device_ip
         )
     except Exception as err:
-        click.secho(f"Failed to create RUTX11Manager: {err}", fg="red")
+        click.secho(f"Failed to create RouterManager: {err}", fg="red")
         return
 
     if parsed_args.restore_default:
