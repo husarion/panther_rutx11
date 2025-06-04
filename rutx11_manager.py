@@ -47,8 +47,6 @@ class RouterManager:
         self._token = None
         self._device_ip = device_ip
         self._request_url = "https://" + device_ip
-        self._device_name = ""
-        self._firmware_version = ""
         self._router_interface = RouterInterface()
 
         self._supported_device_names = ["RUTX11", "RUTX50", "RUTM50"]
