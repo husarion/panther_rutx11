@@ -159,7 +159,7 @@ class RUTX11Manager:
     def _ping_ip(self, ip: str) -> bool:
         try:
             res = subprocess.run(
-                ["ping", "-c 1", "-w 1", ip],
+                ["ping", "-c", "1", "-w", "1", ip],
                 capture_output=True,
                 text=True,
                 check=True,
